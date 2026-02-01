@@ -1,0 +1,5 @@
+{
+  "name": "Telecom Operator Console",
+  "description": "A mission-control dashboard for the Telecom-as-Code platform. Features a web-based terminal for commands, real-time call monitoring, approval workflows, and audit logging.",
+  "requestFramePermissions": []
+}
