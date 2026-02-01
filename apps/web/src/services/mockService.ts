@@ -98,7 +98,8 @@ export const getStats = async () => {
         const data = await apiRequest('/v1/status/recent');
         return {
             ...data.stats,
-            isConfigured: data.stats.isConfigured // Pass through the config status
+            isConfigured: data.stats.isConfigured, // Pass through the config status
+            isMock: false
         };
     }
     // Mock
@@ -107,7 +108,8 @@ export const getStats = async () => {
         activeConferences: mockConferences.length,
         pendingApprovals: mockApprovals.filter(a => a.status === ApprovalStatus.PENDING).length,
         smsToday: mockMessages.length + 12,
-        isConfigured: true // Mock is always configured
+        isConfigured: true, // Mock is always configured
+        isMock: true
     };
 };
 

@@ -57,6 +57,29 @@ export const Dashboard: React.FC = () => {
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
       <OnboardingModal isOpen={showOnboarding} onComplete={() => setShowOnboarding(false)} />
 
+      {/* Mock Mode Banner */}
+      {stats.isMock && (
+        <div className="bg-blue-900/20 border border-blue-900/50 rounded-lg p-4 flex items-center justify-between animate-in slide-in-from-top-2">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-500/10 rounded-lg">
+              <ShieldAlert className="text-blue-400" size={20} />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-blue-200">Simulation Mode Active</h3>
+              <p className="text-xs text-blue-300/70">You are viewing sample data. Connect your EC2 API to see real traffic.</p>
+            </div>
+          </div>
+          <a
+            href="https://github.com/kflohr/telecom-control-plane/blob/main/DEPLOY_FRONTEND.md#4-connecting-to-real-api-optional"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded transition-colors"
+          >
+            Connect Real API
+          </a>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           label="Active Legs"

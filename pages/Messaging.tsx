@@ -10,12 +10,7 @@ export const Messaging: React.FC = () => {
   const [isSending, setIsSending] = useState(false);
 
   const refresh = async () => {
-    try {
-      const data = await getMessages();
-      setMessages(data || []);
-    } catch (e) {
-      console.error("Messaging refresh failed", e);
-    }
+    setMessages(await getMessages());
   };
 
   useEffect(() => {
@@ -33,8 +28,6 @@ export const Messaging: React.FC = () => {
       await executeSms(to, body);
       setBody('');
       refresh();
-    } catch (e) {
-      console.error("Failed to send", e);
     } finally {
       setIsSending(false);
     }
@@ -74,42 +67,55 @@ export const Messaging: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800">
-                {messages.map(msg => (
-                  <tr key={msg.id} className="hover:bg-gray-800/50 group">
-                    <td className="px-4 py-3 align-top">
-                      <div className={`flex items-center gap-2 ${msg.direction === SmsDirection.OUTBOUND ? 'text-blue-400' : 'text-emerald-400'}`}>
-                        {msg.direction === SmsDirection.OUTBOUND ? <ArrowUpRight size={16} /> : <ArrowDownLeft size={16} />}
-                        <span className="text-xs font-bold">{msg.direction === SmsDirection.OUTBOUND ? 'OUT' : 'IN'}</span>
+                {messages.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-12 text-center">
+                      <div className="w-16 h-16 bg-gray-900 border border-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <MessageSquare size={24} className="text-gray-600" />
                       </div>
-                      <div className="text-[10px] text-gray-600 font-mono mt-1">{msg.messageSid}</div>
-                    </td>
-                    <td className="px-4 py-3 align-top font-mono text-xs text-gray-300">
-                      {msg.direction === SmsDirection.OUTBOUND ? (
-                        <>
-                          <div className="text-gray-500">To: <span className="text-gray-200">{msg.to}</span></div>
-                          <div className="text-gray-600">Fr: {msg.from}</div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="text-gray-500">Fr: <span className="text-gray-200">{msg.from}</span></div>
-                          <div className="text-gray-600">To: {msg.to}</div>
-                        </>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 align-top">
-                      <p className="text-gray-300 text-sm leading-relaxed">{msg.body}</p>
-                      <span className={`inline-block mt-2 text-[10px] font-bold px-1.5 py-0.5 rounded border ${msg.status === SmsStatus.DELIVERED ? 'border-emerald-500/30 text-emerald-500 bg-emerald-500/10' :
-                          msg.status === SmsStatus.FAILED ? 'border-red-500/30 text-red-500 bg-red-500/10' :
-                            'border-gray-600 text-gray-500 bg-gray-800'
-                        }`}>
-                        {msg.status.toUpperCase()}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 align-top text-right text-xs text-gray-500 font-mono">
-                      {new Date(msg.sentAt).toLocaleTimeString()}
+                      <h3 className="text-gray-300 font-medium">No messages yet</h3>
+                      <p className="text-gray-500 text-xs mt-1 max-w-xs mx-auto">Send a message from the panel on the right or via the CLI to see traffic here.</p>
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  messages.map(msg => (
+                    <tr key={msg.id} className="hover:bg-gray-800/50 group">
+                      {/* ... cell content same as before ... */}
+                      <td className="px-4 py-3 align-top">
+                        <div className={`flex items-center gap-2 ${msg.direction === SmsDirection.OUTBOUND ? 'text-blue-400' : 'text-emerald-400'}`}>
+                          {msg.direction === SmsDirection.OUTBOUND ? <ArrowUpRight size={16} /> : <ArrowDownLeft size={16} />}
+                          <span className="text-xs font-bold">{msg.direction === SmsDirection.OUTBOUND ? 'OUT' : 'IN'}</span>
+                        </div>
+                        <div className="text-[10px] text-gray-600 font-mono mt-1">{msg.messageSid}</div>
+                      </td>
+                      <td className="px-4 py-3 align-top font-mono text-xs text-gray-300">
+                        {msg.direction === SmsDirection.OUTBOUND ? (
+                          <>
+                            <div className="text-gray-500">To: <span className="text-gray-200">{msg.to}</span></div>
+                            <div className="text-gray-600">Fr: {msg.from}</div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="text-gray-500">Fr: <span className="text-gray-200">{msg.from}</span></div>
+                            <div className="text-gray-600">To: {msg.to}</div>
+                          </>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        <p className="text-gray-300 text-sm leading-relaxed">{msg.body}</p>
+                        <span className={`inline-block mt-2 text-[10px] font-bold px-1.5 py-0.5 rounded border ${msg.status === SmsStatus.DELIVERED ? 'border-emerald-500/30 text-emerald-500 bg-emerald-500/10' :
+                            msg.status === SmsStatus.FAILED ? 'border-red-500/30 text-red-500 bg-red-500/10' :
+                              'border-gray-600 text-gray-500 bg-gray-800'
+                          }`}>
+                          {msg.status.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 align-top text-right text-xs text-gray-500 font-mono">
+                        {new Date(msg.sentAt).toLocaleTimeString()}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

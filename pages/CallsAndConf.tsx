@@ -8,19 +8,14 @@ export const CallsAndConf: React.FC = () => {
   const [conferences, setConferences] = useState<Conference[]>([]);
 
   const refresh = async () => {
-    try {
-      const c = await getCalls();
-      setCalls((c || []).filter(item => item.state !== CallState.COMPLETED && item.state !== CallState.FAILED));
-      const conf = await getConferences();
-      setConferences((conf || []).filter(item => item.state === ConferenceState.IN_PROGRESS));
-    } catch (e) {
-      console.error("Calls refresh failed", e);
-    }
+    const [c, conf] = await Promise.all([getCalls(), getConferences()]);
+    setCalls(c.filter(l => l.state !== CallState.COMPLETED && l.state !== CallState.FAILED));
+    setConferences(conf.filter(cf => cf.state === ConferenceState.IN_PROGRESS));
   };
 
   useEffect(() => {
     refresh();
-    const interval = setInterval(refresh, 1500);
+    const interval = setInterval(refresh, 2000);
     return () => clearInterval(interval);
   }, []);
 
@@ -161,7 +156,7 @@ export const CallsAndConf: React.FC = () => {
                 <tr key={call.id} className="hover:bg-gray-800/30 transition-colors">
                   <td className="px-6 py-4">
                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${call.state === CallState.RINGING ? 'bg-yellow-500/10 text-yellow-400 animate-pulse' :
-                      call.state === CallState.IN_PROGRESS ? 'bg-emerald-500/10 text-emerald-400' : 'bg-gray-700 text-gray-300'
+                        call.state === CallState.IN_PROGRESS ? 'bg-emerald-500/10 text-emerald-400' : 'bg-gray-700 text-gray-300'
                       }`}>
                       {call.state === CallState.RINGING && <span className="w-1.5 h-1.5 rounded-full bg-yellow-400" />}
                       {call.state === CallState.IN_PROGRESS && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
@@ -189,7 +184,13 @@ export const CallsAndConf: React.FC = () => {
               ))}
               {calls.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500">No active calls.</td>
+                  <td colSpan={5} className="px-6 py-12 text-center">
+                    <div className="w-12 h-12 bg-emerald-900/10 border border-emerald-900/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <Phone size={20} className="text-emerald-700" />
+                    </div>
+                    <p className="text-gray-400 font-medium">No active calls</p>
+                    <p className="text-gray-600 text-xs mt-1">Start a call via CLI or verify your Twilio webhook.</p>
+                  </td>
                 </tr>
               )}
             </tbody>

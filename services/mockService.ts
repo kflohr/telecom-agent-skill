@@ -96,14 +96,20 @@ export const getSystemHealth = async () => {
 export const getStats = async () => {
     if (USE_REAL_API) {
         const data = await apiRequest('/v1/status/recent');
-        return data.stats;
+        return {
+            ...data.stats,
+            isConfigured: data.stats.isConfigured, // Pass through the config status
+            isMock: false
+        };
     }
     // Mock
     return {
         activeCalls: mockCalls.length,
         activeConferences: mockConferences.length,
         pendingApprovals: mockApprovals.filter(a => a.status === ApprovalStatus.PENDING).length,
-        smsToday: mockMessages.length + 12
+        smsToday: mockMessages.length + 12,
+        isConfigured: true, // Mock is always configured
+        isMock: true
     };
 };
 
@@ -187,6 +193,16 @@ export const updateApproval = async (id: string, status: ApprovalStatus) => {
     }
     const idx = mockApprovals.findIndex(a => a.id === id);
     if (idx !== -1) mockApprovals[idx].status = status;
+};
+
+export const setupProvider = async (accountSid: string, authToken: string, fromNumber: string) => {
+    if (USE_REAL_API) {
+        return await apiRequest('/v1/setup/provider', 'POST', { accountSid, authToken, fromNumber });
+    }
+    // Mock
+    await new Promise(r => setTimeout(r, 1000));
+    console.log("Mock Provider Setup", accountSid);
+    return { status: 'configured' };
 };
 
 // --- COMMAND PARSER (Browser Implementation of CLI) ---

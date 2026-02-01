@@ -1,45 +1,85 @@
 import React, { useEffect, useState } from 'react';
 import { TerminalWidget } from '../components/TerminalWidget';
+import { OnboardingModal } from '../components/OnboardingModal';
 import { getStats, getCalls, getConferences } from '../services/mockService';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { MOCK_CHART_DATA } from '../constants';
-import { Phone, Users, MessageSquare, ShieldAlert, GitMerge, Mic, MicOff } from 'lucide-react';
+import { Phone, Users, MessageSquare, ShieldAlert, GitMerge, Mic, MicOff, PlusCircle } from 'lucide-react';
 import { CallState, CallLeg, Conference, ConferenceState } from '../types';
 
 export const Dashboard: React.FC = () => {
-  const [stats, setStats] = useState({ activeCalls: 0, activeConferences: 0, pendingApprovals: 0, smsToday: 0 });
+  const [stats, setStats] = useState<any>({ activeCalls: 0, activeConferences: 0, smsToday: 0, pendingApprovals: 0 });
   const [activeCalls, setActiveCalls] = useState<CallLeg[]>([]);
   const [activeConferences, setActiveConferences] = useState<Conference[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     const refresh = async () => {
       try {
-        const s = await getStats();
-        if (s) setStats(s);
+        const [newStats, calls, conferences] = await Promise.all([
+          getStats(),
+          getCalls(),
+          getConferences()
+        ]);
 
-        const allCalls = await getCalls();
-        const allConferences = await getConferences();
+        setStats(newStats);
 
-        // Simple mock filters
-        const calls = (allCalls || []).filter(c =>
+        // Check Config Status
+        if (newStats.isConfigured === false) {
+          setShowOnboarding(true);
+        }
+
+        // Filter logic
+        const liveCalls = calls.filter(c =>
           (c.state === CallState.IN_PROGRESS || c.state === CallState.RINGING) &&
-          // Filter out calls that are currently in a conference
-          !(allConferences || []).some(conf => conf.participants.some(p => p.callSid === c.callSid))
+          // Do not show calls that are inside a conference in the 'Solo' list
+          !conferences.some(conf => conf.participants.some(p => p.callSid === c.callSid))
         );
-        setActiveCalls(calls);
-        setActiveConferences((allConferences || []).filter(c => c.state === ConferenceState.IN_PROGRESS));
+
+        setActiveCalls(liveCalls);
+        setActiveConferences(conferences.filter(c => c.state === ConferenceState.IN_PROGRESS));
       } catch (e) {
-        console.error("Dashboard refresh failed", e);
+        console.error("Failed to fetch dashboard data", e);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     refresh();
-    const interval = setInterval(refresh, 2000);
+    const interval = setInterval(refresh, 3000);
     return () => clearInterval(interval);
   }, []);
 
+  if (isLoading && stats.activeCalls === 0) return <div className="p-8 text-gray-500">Loading Control Plane...</div>;
+
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
+      <OnboardingModal isOpen={showOnboarding} onComplete={() => setShowOnboarding(false)} />
+
+      {/* Mock Mode Banner */}
+      {stats.isMock && (
+        <div className="bg-blue-900/20 border border-blue-900/50 rounded-lg p-4 flex items-center justify-between animate-in slide-in-from-top-2">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-500/10 rounded-lg">
+              <ShieldAlert className="text-blue-400" size={20} />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-blue-200">Simulation Mode Active</h3>
+              <p className="text-xs text-blue-300/70">You are viewing sample data. Connect your EC2 API to see real traffic.</p>
+            </div>
+          </div>
+          <a
+            href="https://github.com/kflohr/telecom-control-plane/blob/main/DEPLOY_FRONTEND.md#4-connecting-to-real-api-optional"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded transition-colors"
+          >
+            Connect Real API
+          </a>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           label="Active Legs"
@@ -72,8 +112,14 @@ export const Dashboard: React.FC = () => {
         <div className="xl:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-200">Operator Console</h2>
-            <div className="flex gap-2">
-              <span className="text-xs font-mono text-gray-500 bg-gray-900 px-2 py-1 rounded border border-gray-800">CLI: v1.0.4</span>
+            <div className="flex gap-2 items-center">
+              <button
+                onClick={() => confirm('Place test call to +15550000000?') && console.log('Test call initiated')}
+                className="bg-emerald-900/30 hover:bg-emerald-900/50 text-emerald-400 text-xs px-3 py-1 rounded border border-emerald-800 transition-colors flex items-center gap-1"
+              >
+                <Phone size={12} /> Test Call
+              </button>
+              <span className="text-xs font-mono text-gray-500 bg-gray-900 px-2 py-1 rounded border border-gray-800">CLI: v1.1.0</span>
               <span className="text-xs font-mono text-blue-400 bg-blue-900/20 px-2 py-1 rounded border border-blue-900/50">ENV: PROD</span>
             </div>
           </div>

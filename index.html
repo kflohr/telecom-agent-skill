@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Telecom Operator Console</title>
+    <!-- Tailwind CSS (CDN for now, can move to PostCSS later) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
@@ -42,37 +43,10 @@
         background: #6b7280; 
       }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "lucide-react": "https://esm.sh/lucide-react@0.292.0?deps=react@18.2.0",
-    "recharts": "https://esm.sh/recharts@2.12.0?deps=react@18.2.0,react-dom@18.2.0",
-    "react": "https://esm.sh/react@18.2.0",
-    "react/": "https://esm.sh/react@18.2.0/",
-    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client?deps=react@18.2.0",
-    "react-dom": "https://esm.sh/react-dom@18.2.0?deps=react@18.2.0",
-    "zod": "https://esm.sh/zod@3.22.4",
-    "@prisma/client": "https://esm.sh/@prisma/client@5.10.0",
-    "crypto": "https://esm.sh/crypto@1.0.1",
-    "fastify": "https://esm.sh/fastify@4.26.1",
-    "@fastify/formbody": "https://esm.sh/@fastify/formbody@7.4.0",
-    "twilio": "https://esm.sh/twilio@4.23.0",
-    "@fastify/cors": "https://esm.sh/@fastify/cors@9.0.1",
-    "commander": "https://esm.sh/commander@11.1.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
-    "node-fetch": "https://esm.sh/node-fetch@^3.3.2",
-    "chalk": "https://esm.sh/chalk@^5.6.2",
-    "uuid": "https://esm.sh/uuid@^13.0.0",
-    "dotenv": "https://esm.sh/dotenv@^17.2.3",
-    "telegraf": "https://esm.sh/telegraf@^4.16.3"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
 </head>
   <body class="bg-gray-950 text-gray-100 antialiased overflow-hidden">
     <div id="root"></div>
-    <script type="module" src="./index.tsx"></script>
-  <script type="module" src="/index.tsx"></script>
-</body>
+    <!-- Vite Entry Point -->
+    <script type="module" src="/index.tsx"></script>
+  </body>
 </html>
