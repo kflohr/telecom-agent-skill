@@ -1,11 +1,10 @@
 import { getConfig } from './config.js';
 import { randomUUID } from 'crypto';
 
-const config = getConfig();
-
 export const request = async (method: string, path: string, body?: any) => {
+  const config = getConfig() as any; // <--- Lazy load here
   const requestId = randomUUID();
-  
+
   try {
     const res = await fetch(`${config.TELECOM_API_URL}${path}`, {
       method,
@@ -42,7 +41,7 @@ export const request = async (method: string, path: string, body?: any) => {
     return data;
   } catch (error: any) {
     if (error.exitCode) throw error;
-    
+
     // Network Error -> Exit 3
     throw {
       message: error.message || 'Network request failed',

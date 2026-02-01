@@ -7,6 +7,8 @@ async function main() {
   console.log('🌱 Starting Database Seed...');
 
   // 1. Ensure the Default Workspace exists
+  // We use a fixed ID 'default' so that webhooks (which lack context) can attach to it easily in MVP
+  // In the future, this should be an environment variable DEFAULT_WORKSPACE_ID
   const existingWorkspace = await prisma.workspace.findUnique({
     where: { id: 'default' }
   });
@@ -21,7 +23,7 @@ async function main() {
   const token = 'sk_' + randomBytes(16).toString('hex');
   const workspace = await prisma.workspace.create({
     data: {
-      id: 'default',
+      id: 'default', // Hardcoded for MVP Reconciler compatibility
       name: 'Production',
       apiToken: token,
       settings: {

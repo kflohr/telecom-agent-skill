@@ -7,7 +7,15 @@ export const Audit: React.FC = () => {
   const [logs, setLogs] = useState<AuditLog[]>([]);
 
   useEffect(() => {
-    setLogs(getAuditLogs());
+    const load = async () => {
+      try {
+        const data = await getAuditLogs();
+        setLogs(data || []);
+      } catch (e) {
+        console.error("Audit load failed", e);
+      }
+    };
+    load();
   }, []);
 
   return (
@@ -19,9 +27,9 @@ export const Audit: React.FC = () => {
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
-          <input 
-            type="text" 
-            placeholder="Search request ID or actor..." 
+          <input
+            type="text"
+            placeholder="Search request ID or actor..."
             className="bg-gray-900 border border-gray-800 text-gray-200 pl-10 pr-4 py-2 rounded-lg text-sm w-full sm:w-64 focus:ring-2 focus:ring-blue-500/50 outline-none"
           />
         </div>

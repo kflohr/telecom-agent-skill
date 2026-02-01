@@ -5,10 +5,13 @@ import { z } from 'zod';
 import chalk from 'chalk';
 import { request } from './http.js';
 import { Output } from './output.js';
-// Relative import for shared schemas to avoid build complexity in this monorepo setup
-import { CallDialSchema, SmsSendSchema, ConferenceMergeSchema } from '../../../packages/shared/schemas.js';
+// Using local schemas copy for self-contained packaging
+import { CallDialSchema, SmsSendSchema, ConferenceMergeSchema } from './lib/schemas.js';
+
+import { registerOnboard } from './commands/onboard.js';
 
 const program = new Command();
+registerOnboard(program);
 let output: Output;
 
 program
@@ -24,7 +27,7 @@ program
 const handleError = (err: any) => {
   if (output) output.error(err);
   else console.error(JSON.stringify(err));
-  
+
   if (err instanceof z.ZodError) (process as any).exit(2);
   (process as any).exit(err.exitCode || 1);
 };
@@ -40,7 +43,7 @@ call.command('dial')
     try {
       const payload = CallDialSchema.parse({ to, from: opts.from });
       const res = await request('POST', '/v1/calls/dial', payload);
-      
+
       if (opts.human || program.opts().human) {
         console.log(chalk.green('✔ Call Initiated'));
         console.log(`SID: ${chalk.bold(res.callSid)}`);
@@ -49,9 +52,9 @@ call.command('dial')
       }
     } catch (err: any) {
       if (err instanceof z.ZodError) {
-          handleError({ message: 'Validation Error', code: 'VALIDATION_ERROR', details: err.errors, exitCode: 2 });
+        handleError({ message: 'Validation Error', code: 'VALIDATION_ERROR', details: err.errors, exitCode: 2 });
       } else {
-          handleError(err);
+        handleError(err);
       }
     }
   });
@@ -64,7 +67,7 @@ call.command('merge')
     try {
       const payload = ConferenceMergeSchema.parse({ callSidA, callSidB });
       const res = await request('POST', '/v1/conferences/merge', payload);
-      
+
       if (opts.human || program.opts().human) {
         console.log(chalk.green('✔ Merge Requested'));
         console.log(`Conference: ${chalk.bold(res.friendlyName)}`);
@@ -72,10 +75,10 @@ call.command('merge')
         output.log(res);
       }
     } catch (err: any) {
-       if (err instanceof z.ZodError) {
-          handleError({ message: 'Validation Error', code: 'VALIDATION_ERROR', details: err.errors, exitCode: 2 });
+      if (err instanceof z.ZodError) {
+        handleError({ message: 'Validation Error', code: 'VALIDATION_ERROR', details: err.errors, exitCode: 2 });
       } else {
-          handleError(err);
+        handleError(err);
       }
     }
   });
@@ -105,7 +108,7 @@ sms.command('send')
     try {
       const payload = SmsSendSchema.parse({ to, body: message });
       const res = await request('POST', '/v1/sms/send', payload);
-      
+
       if (program.opts().human) {
         console.log(chalk.green('✔ SMS Queued'));
         console.log(`SID: ${chalk.bold(res.messageSid)}`);
@@ -113,11 +116,11 @@ sms.command('send')
         output.log(res);
       }
     } catch (err: any) {
-        if (err instanceof z.ZodError) {
-          handleError({ message: 'Validation Error', code: 'VALIDATION_ERROR', details: err.errors, exitCode: 2 });
-        } else {
-          handleError(err);
-        }
+      if (err instanceof z.ZodError) {
+        handleError({ message: 'Validation Error', code: 'VALIDATION_ERROR', details: err.errors, exitCode: 2 });
+      } else {
+        handleError(err);
+      }
     }
   });
 
@@ -130,8 +133,8 @@ approvals.command('list')
     try {
       const res = await request('GET', '/v1/approvals/pending');
       if (program.opts().human) {
-         if (res.length === 0) console.log(chalk.gray('No pending approvals.'));
-         else output.table(['ID', 'Type', 'Action'], res.map((a: any) => [a.id, a.type, a.action]));
+        if (res.length === 0) console.log(chalk.gray('No pending approvals.'));
+        else output.table(['ID', 'Type', 'Action'], res.map((a: any) => [a.id, a.type, a.action]));
       } else {
         output.log(res);
       }
@@ -184,9 +187,9 @@ program.command('merge')
   .argument('<callSidA>')
   .argument('<callSidB>')
   .action(async (a, b) => {
-     // Re-invoke the sub-command logic directly or via emit, but simpler to just call logic
-     // Duplicating logic here for simplicity in single-file strictness
-     try {
+    // Re-invoke the sub-command logic directly or via emit, but simpler to just call logic
+    // Duplicating logic here for simplicity in single-file strictness
+    try {
       const payload = ConferenceMergeSchema.parse({ callSidA: a, callSidB: b });
       const res = await request('POST', '/v1/conferences/merge', payload);
       if (program.opts().human) {
@@ -194,8 +197,8 @@ program.command('merge')
         console.log(`Conference: ${chalk.bold(res.friendlyName)}`);
       } else output.log(res);
     } catch (err: any) {
-        if (err instanceof z.ZodError) handleError({ message: 'Validation Error', code: 'VALIDATION_ERROR', details: err.errors, exitCode: 2 });
-        else handleError(err);
+      if (err instanceof z.ZodError) handleError({ message: 'Validation Error', code: 'VALIDATION_ERROR', details: err.errors, exitCode: 2 });
+      else handleError(err);
     }
   });
 

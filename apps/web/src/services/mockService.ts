@@ -1,15 +1,15 @@
-import { 
-  CallLeg, 
-  CallState, 
-  Conference, 
-  ConferenceState, 
-  SmsMessage, 
-  SmsDirection, 
-  SmsStatus, 
-  Approval, 
-  ApprovalStatus, 
-  ActorSource,
-  AuditLog
+import {
+    CallLeg,
+    CallState,
+    Conference,
+    ConferenceState,
+    SmsMessage,
+    SmsDirection,
+    SmsStatus,
+    Approval,
+    ApprovalStatus,
+    ActorSource,
+    AuditLog
 } from '../types';
 
 // CONFIG
@@ -20,7 +20,7 @@ const USE_REAL_API = !!API_URL;
 
 // --- MOCK STATE (Fallback) ---
 let mockCalls: CallLeg[] = [
-  { id: '1', callSid: 'CA_MOCK_1', direction: 'outbound-api', from: '+14155550100', to: '+14155550199', state: CallState.IN_PROGRESS, startedAt: new Date(Date.now() - 1000 * 60 * 2).toISOString() },
+    { id: '1', callSid: 'CA_MOCK_1', direction: 'outbound-api', from: '+14155550100', to: '+14155550199', state: CallState.IN_PROGRESS, startedAt: new Date(Date.now() - 1000 * 60 * 2).toISOString() },
 ];
 let mockConferences: Conference[] = [];
 let mockMessages: SmsMessage[] = [];
@@ -40,7 +40,7 @@ const apiRequest = async (path: string, method: string = 'GET', body?: any) => {
             },
             body: body ? JSON.stringify(body) : undefined
         });
-        
+
         const text = await res.text();
         try {
             const json = JSON.parse(text);
@@ -62,19 +62,19 @@ export const getSystemHealth = async () => {
     if (USE_REAL_API) {
         // Parallel fetch for DB health and Agent status
         const [health, agentStatus] = await Promise.all([
-             apiRequest('/v1/health').catch(() => ({ status: 'error' })),
-             apiRequest('/v1/agent/status').catch(() => ({ status: 'offline', online: false }))
+            apiRequest('/v1/health').catch(() => ({ status: 'error' })),
+            apiRequest('/v1/agent/status').catch(() => ({ status: 'offline', online: false }))
         ]);
-        
+
         return {
             status: health.status === 'ok' ? 'ok' : 'error',
             services: {
                 database: health.db === 'up' ? 'connected' : 'disconnected',
                 twilio: 'connected', // Assumed for now
-                agent: { 
-                    status: agentStatus.status || 'offline', 
-                    label: agentStatus.label || 'Unknown', 
-                    lastSeen: agentStatus.lastHeartbeatAt 
+                agent: {
+                    status: agentStatus.status || 'offline',
+                    label: agentStatus.label || 'Unknown',
+                    lastSeen: agentStatus.lastHeartbeatAt
                 }
             }
         };
@@ -96,14 +96,18 @@ export const getSystemHealth = async () => {
 export const getStats = async () => {
     if (USE_REAL_API) {
         const data = await apiRequest('/v1/status/recent');
-        return data.stats;
+        return {
+            ...data.stats,
+            isConfigured: data.stats.isConfigured // Pass through the config status
+        };
     }
     // Mock
     return {
         activeCalls: mockCalls.length,
         activeConferences: mockConferences.length,
         pendingApprovals: mockApprovals.filter(a => a.status === ApprovalStatus.PENDING).length,
-        smsToday: mockMessages.length + 12
+        smsToday: mockMessages.length + 12,
+        isConfigured: true // Mock is always configured
     };
 };
 
@@ -189,6 +193,16 @@ export const updateApproval = async (id: string, status: ApprovalStatus) => {
     if (idx !== -1) mockApprovals[idx].status = status;
 };
 
+export const setupProvider = async (accountSid: string, authToken: string, fromNumber: string) => {
+    if (USE_REAL_API) {
+        return await apiRequest('/v1/setup/provider', 'POST', { accountSid, authToken, fromNumber });
+    }
+    // Mock
+    await new Promise(r => setTimeout(r, 1000));
+    console.log("Mock Provider Setup", accountSid);
+    return { status: 'configured' };
+};
+
 // --- COMMAND PARSER (Browser Implementation of CLI) ---
 // This allows the Web Terminal to mimic the CLI behavior by hitting the API directly
 
@@ -210,9 +224,9 @@ export const processCommand = async (cmdStr: string): Promise<{ output: any; sta
                 const to = args[3];
                 const fromIdx = args.indexOf('--from');
                 const from = fromIdx > -1 ? args[fromIdx + 1] : undefined;
-                
+
                 if (!to) throw new Error("Missing argument: <to>");
-                
+
                 if (USE_REAL_API) {
                     const res = await apiRequest('/v1/calls/dial', 'POST', { to, from });
                     return { output: JSON.stringify(res, null, 2), status: 'success' };
@@ -224,7 +238,7 @@ export const processCommand = async (cmdStr: string): Promise<{ output: any; sta
                 const sidA = args[3];
                 const sidB = args[4];
                 if (!sidA || !sidB) throw new Error("Missing arguments: <sidA> <sidB>");
-                
+
                 if (USE_REAL_API) {
                     const res = await apiRequest('/v1/conferences/merge', 'POST', { callSidA: sidA, callSidB: sidB });
                     return { output: JSON.stringify(res, null, 2), status: 'success' };
@@ -247,7 +261,7 @@ export const processCommand = async (cmdStr: string): Promise<{ output: any; sta
                 // Handle message body which might be multiple args or quoted
                 let body = args.slice(4).join(' ');
                 if (!to || !body) throw new Error("Usage: telecom sms send <to> <message>");
-                
+
                 if (USE_REAL_API) {
                     const res = await apiRequest('/v1/sms/send', 'POST', { to, body });
                     return { output: JSON.stringify(res, null, 2), status: 'success' };
@@ -257,15 +271,15 @@ export const processCommand = async (cmdStr: string): Promise<{ output: any; sta
         }
 
         if (noun === 'approvals') {
-             if (verb === 'list') {
-                 if (USE_REAL_API) {
-                     const res = await apiRequest('/v1/approvals/pending');
-                     return { output: JSON.stringify(res, null, 2), status: 'success' };
-                 }
-                 return { output: JSON.stringify(mockApprovals, null, 2), status: 'success' };
-             }
+            if (verb === 'list') {
+                if (USE_REAL_API) {
+                    const res = await apiRequest('/v1/approvals/pending');
+                    return { output: JSON.stringify(res, null, 2), status: 'success' };
+                }
+                return { output: JSON.stringify(mockApprovals, null, 2), status: 'success' };
+            }
         }
-        
+
         if (noun === 'approve') {
             const id = args[2];
             if (!id) throw new Error("Missing argument: <id>");
@@ -275,7 +289,7 @@ export const processCommand = async (cmdStr: string): Promise<{ output: any; sta
             }
             return { output: `Approved ${id} (Simulated)`, status: 'success' };
         }
-        
+
         if (noun === 'deny') {
             const id = args[2];
             const reason = args[3]; // simplifed
@@ -288,12 +302,13 @@ export const processCommand = async (cmdStr: string): Promise<{ output: any; sta
         }
 
         if (noun === 'status') {
-             const stats = await getStats();
-             return { output: JSON.stringify(stats, null, 2), status: 'success' };
+            const stats = await getStats();
+            return { output: JSON.stringify(stats, null, 2), status: 'success' };
         }
-        
+
         if (noun === 'help') {
-            return { output: `Available commands:
+            return {
+                output: `Available commands:
   telecom call dial <to> [--from <num>]
   telecom call merge <sidA> <sidB>
   telecom call list
@@ -301,7 +316,8 @@ export const processCommand = async (cmdStr: string): Promise<{ output: any; sta
   telecom approvals list
   telecom approve <id>
   telecom deny <id>
-  telecom status`, status: 'system' };
+  telecom status`, status: 'system'
+            };
         }
 
         return { output: `Unknown command: ${noun} ${verb || ''}`, status: 'error' };

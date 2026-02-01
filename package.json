@@ -5,6 +5,7 @@
     "apps/*",
     "packages/*"
   ],
+  "packageManager": "npm@10.8.2",
   "scripts": {
     "build": "turbo run build",
     "dev": "turbo run dev",
@@ -19,13 +20,21 @@
     "db:seed": "tsx prisma/seed.ts"
   },
   "devDependencies": {
-    "turbo": "latest",
+    "@types/node": "^20.11.19",
     "prisma": "^5.10.2",
-    "typescript": "^5.3.3",
     "tsx": "^4.7.0",
-    "@types/node": "^20.11.19"
+    "turbo": "latest",
+    "typescript": "^5.3.3"
   },
   "dependencies": {
-    "@prisma/client": "^5.10.2"
+    "@prisma/client": "^5.10.2",
+    "@vitejs/plugin-react": "^4.7.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.563.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "recharts": "^3.7.0",
+    "tailwind-merge": "^3.4.0",
+    "vite": "^6.4.1"
   }
 }

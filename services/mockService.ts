@@ -1,185 +1,314 @@
-import { 
-  CallLeg, 
-  CallState, 
-  Conference, 
-  ConferenceState, 
-  SmsMessage, 
-  SmsDirection, 
-  SmsStatus, 
-  Approval, 
-  ApprovalStatus, 
-  ApprovalType, 
-  ActorSource,
-  AuditLog,
-  Participant
+import {
+    CallLeg,
+    CallState,
+    Conference,
+    ConferenceState,
+    SmsMessage,
+    SmsDirection,
+    SmsStatus,
+    Approval,
+    ApprovalStatus,
+    ActorSource,
+    AuditLog
 } from '../types';
 
-// CONFIG: Hybrid Mode
-// Safely access env variables to prevent runtime crash if import.meta.env is undefined
+// CONFIG
 const env = (import.meta as any).env || {};
 const API_URL = env.VITE_API_URL;
 const API_TOKEN = env.VITE_API_TOKEN || 'demo-token';
-
 const USE_REAL_API = !!API_URL;
 
 // --- MOCK STATE (Fallback) ---
-const SYSTEM_START = Date.now();
-let calls: CallLeg[] = [
-  { id: '1', callSid: 'CA_MOCK_1', direction: 'outbound-api', from: '+14155550100', to: '+14155550199', state: CallState.IN_PROGRESS, startedAt: new Date(Date.now() - 1000 * 60 * 2).toISOString() },
+let mockCalls: CallLeg[] = [
+    { id: '1', callSid: 'CA_MOCK_1', direction: 'outbound-api', from: '+14155550100', to: '+14155550199', state: CallState.IN_PROGRESS, startedAt: new Date(Date.now() - 1000 * 60 * 2).toISOString() },
 ];
-let conferences: Conference[] = [];
-let messages: SmsMessage[] = [];
-let approvals: Approval[] = [];
-let auditLogs: AuditLog[] = [];
+let mockConferences: Conference[] = [];
+let mockMessages: SmsMessage[] = [];
+let mockApprovals: Approval[] = [];
+let mockAuditLogs: AuditLog[] = [];
 
-// --- API CLIENT HELPERS ---
-const apiCall = async (endpoint: string, method: string = 'GET', body?: any) => {
+// --- HELPER: API REQUEST ---
+const apiRequest = async (path: string, method: string = 'GET', body?: any) => {
+    if (!USE_REAL_API) return null;
     try {
-        const headers: Record<string, string> = {
-            'Content-Type': 'application/json',
-            'X-Workspace-Token': API_TOKEN,
-            'X-Actor-Source': 'web'
-        };
-        const res = await fetch(`${API_URL}${endpoint}`, {
+        const res = await fetch(`${API_URL}${path}`, {
             method,
-            headers,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Workspace-Token': API_TOKEN,
+                'X-Actor-Source': 'web'
+            },
             body: body ? JSON.stringify(body) : undefined
         });
-        if (!res.ok) throw new Error(`API Error: ${res.statusText}`);
-        return await res.json();
-    } catch (e) {
-        console.error("API Call Failed", e);
-        return null;
+
+        const text = await res.text();
+        try {
+            const json = JSON.parse(text);
+            if (!res.ok) throw new Error(json.error || json.message || res.statusText);
+            return json;
+        } catch (e) {
+            if (!res.ok) throw new Error(res.statusText);
+            return { message: text };
+        }
+    } catch (e: any) {
+        console.error("API Error:", e);
+        throw e;
     }
 };
 
-// --- DATA ACCESSORS ---
+// --- SYSTEM HEALTH ---
+
+export const getSystemHealth = async () => {
+    if (USE_REAL_API) {
+        // Parallel fetch for DB health and Agent status
+        const [health, agentStatus] = await Promise.all([
+            apiRequest('/v1/health').catch(() => ({ status: 'error' })),
+            apiRequest('/v1/agent/status').catch(() => ({ status: 'offline', online: false }))
+        ]);
+
+        return {
+            status: health.status === 'ok' ? 'ok' : 'error',
+            services: {
+                database: health.db === 'up' ? 'connected' : 'disconnected',
+                twilio: 'connected', // Assumed for now
+                agent: {
+                    status: agentStatus.status || 'offline',
+                    label: agentStatus.label || 'Unknown',
+                    lastSeen: agentStatus.lastHeartbeatAt
+                }
+            }
+        };
+    }
+    // Mock Health
+    return {
+        status: 'ok',
+        services: {
+            database: 'connected',
+            twilio: 'connected',
+            agent: { status: 'active', label: 'OpenClaw (Sim)', lastSeen: Date.now() }
+        }
+    }
+};
+
+
+// --- READ OPERATIONS ---
 
 export const getStats = async () => {
-  if (USE_REAL_API) {
-      const data = await apiCall('/v1/status/recent');
-      if (data && data.stats) return data.stats;
-  }
-  return {
-    activeCalls: calls.length,
-    activeConferences: conferences.length,
-    pendingApprovals: approvals.filter(a => a.status === ApprovalStatus.PENDING).length,
-    smsToday: messages.length + 12 // Mock offset
-  };
-};
-
-export const getCalls = () => {
-    // Note: To support sync usage in React without massive refactor, 
-    // real API integration usually requires `useEffect` + `useState`.
-    // For this file to remain a drop-in replacement, we should ideally be async.
-    // However, the UI calls `getCalls()` directly in render or effects assuming sync for the mock.
-    // The Dashboard.tsx uses `useEffect` to call `refresh`.
-    // We will return the local cache which is updated by `refreshData` loop if real API is on.
-    return [...calls];
-};
-
-export const getConferences = () => [...conferences];
-export const getMessages = () => [...messages];
-export const getApprovals = () => [...approvals];
-export const getAuditLogs = () => [...auditLogs];
-
-// This function needs to be called by the UI's polling interval to fetch fresh data
-// We can hack this into the existing getters or export a refresher.
-// Current UI: `useEffect` calls `getStats` / `getCalls` etc. 
-// We will make `getStats` (or a global poller) trigger a fetch in the background to update local cache.
-
-let isFetching = false;
-const fetchRealState = async () => {
-    if (isFetching || !USE_REAL_API) return;
-    isFetching = true;
-    try {
-        const statusData = await apiCall('/v1/status/recent');
-        if (statusData) {
-            calls = statusData.calls || [];
-            conferences = statusData.conferences || [];
-        }
-        
-        const smsData = await apiCall('/v1/sms/recent');
-        if (smsData) messages = smsData;
-        
-        const auditData = await apiCall('/v1/audit/recent');
-        if (auditData) auditLogs = auditData;
-
-        const approvalData = await apiCall('/v1/approvals/pending');
-        if (approvalData) approvals = approvalData;
-
-    } finally {
-        isFetching = false;
+    if (USE_REAL_API) {
+        const data = await apiRequest('/v1/status/recent');
+        return data.stats;
     }
+    // Mock
+    return {
+        activeCalls: mockCalls.length,
+        activeConferences: mockConferences.length,
+        pendingApprovals: mockApprovals.filter(a => a.status === ApprovalStatus.PENDING).length,
+        smsToday: mockMessages.length + 12
+    };
 };
 
-// Hook into the getters to trigger background refresh
-if (USE_REAL_API) {
-    setInterval(fetchRealState, 2000);
-}
-
-// --- ACTIONS ---
-
-export const executeHangup = async (callSid: string, source: ActorSource = ActorSource.WEB) => {
-  if (USE_REAL_API) {
-      // API doesn't have hangup yet in the snippet, but assuming standard Twilio via API
-      // We can add POST /v1/calls/hangup or use Twilio directly.
-      // For now, we'll just log locally as not implemented in API yet.
-      console.warn("Hangup via API not implemented in Phase 2 yet.");
-      return;
-  }
-  // Mock Logic
-  const idx = calls.findIndex(c => c.callSid === callSid);
-  if (idx !== -1) calls.splice(idx, 1);
+export const getCalls = async (): Promise<CallLeg[]> => {
+    if (USE_REAL_API) {
+        const data = await apiRequest('/v1/status/recent'); // Optimized to get all in one go or use /v1/calls
+        return data.calls || [];
+    }
+    return [...mockCalls];
 };
 
-export const executeHold = (callSid: string, onHold: boolean, source: ActorSource = ActorSource.WEB) => {
-    // API logic pending
-    console.log("Hold/Unhold", callSid, onHold);
-    return true;
+export const getConferences = async (): Promise<Conference[]> => {
+    if (USE_REAL_API) {
+        const data = await apiRequest('/v1/conferences');
+        return data || [];
+    }
+    return [...mockConferences];
 };
 
-export const executeSms = async (to: string, body: string, source: ActorSource = ActorSource.WEB) => {
-   if (USE_REAL_API) {
-       await apiCall('/v1/sms/send', 'POST', { to, body });
-       return;
-   }
-   const msg = {
-      id: Math.random().toString(),
-      messageSid: 'SM_MOCK',
-      direction: SmsDirection.OUTBOUND,
-      status: SmsStatus.QUEUED,
-      from: 'MOCK',
-      to,
-      body,
-      sentAt: new Date().toISOString()
-   } as SmsMessage;
-   messages.unshift(msg);
-   return msg;
+export const getMessages = async (): Promise<SmsMessage[]> => {
+    if (USE_REAL_API) {
+        return await apiRequest('/v1/sms/recent') || [];
+    }
+    return [...mockMessages];
+};
+
+export const getApprovals = async (): Promise<Approval[]> => {
+    if (USE_REAL_API) {
+        return await apiRequest('/v1/approvals/pending') || [];
+    }
+    return [...mockApprovals];
+};
+
+export const getAuditLogs = async (): Promise<AuditLog[]> => {
+    if (USE_REAL_API) {
+        return await apiRequest('/v1/audit/recent') || [];
+    }
+    return [...mockAuditLogs];
+};
+
+// --- WRITE OPERATIONS ---
+
+export const executeHangup = async (callSid: string) => {
+    if (USE_REAL_API) {
+        console.warn("API Hangup endpoint not yet exposed in this version.");
+        return;
+    }
+    mockCalls = mockCalls.filter(c => c.callSid !== callSid);
+};
+
+export const executeHold = async (callSid: string, onHold: boolean) => {
+    if (USE_REAL_API) {
+        console.warn("API Hold endpoint not yet exposed.");
+        return;
+    }
+    console.log("Mock Hold", callSid, onHold);
+};
+
+export const executeSms = async (to: string, body: string) => {
+    if (USE_REAL_API) {
+        return await apiRequest('/v1/sms/send', 'POST', { to, body });
+    }
+    const msg = {
+        id: Math.random().toString(),
+        messageSid: 'SM_MOCK_' + Date.now(),
+        direction: SmsDirection.OUTBOUND,
+        status: SmsStatus.QUEUED,
+        from: 'MOCK',
+        to,
+        body,
+        sentAt: new Date().toISOString()
+    } as SmsMessage;
+    mockMessages.unshift(msg);
+    return msg;
 };
 
 export const updateApproval = async (id: string, status: ApprovalStatus) => {
     if (USE_REAL_API) {
         const decision = status === ApprovalStatus.APPROVED ? 'approve' : 'deny';
-        await apiCall(`/v1/approvals/${id}/decision`, 'POST', { decision });
-        // Force refresh
-        fetchRealState();
-        return;
+        return await apiRequest(`/v1/approvals/${id}/decision`, 'POST', { decision });
     }
-    const idx = approvals.findIndex(a => a.id === id);
-    if (idx !== -1) approvals[idx].status = status;
+    const idx = mockApprovals.findIndex(a => a.id === id);
+    if (idx !== -1) mockApprovals[idx].status = status;
 };
 
-// --- CLI SIMULATION ---
-export const processCommand = (cmdStr: string): { output: string; status: 'success' | 'error' | 'pending' | 'system' } => {
-  // The CLI widget in the UI is purely client-side simulation for now.
-  // In a real deployment, we might send this command string to the API to interpret?
-  // Or just keep the UI terminal as a "client-side" helper that calls the API Actions.
-  
-  // We will keep the existing mock implementation for the Terminal because rewriting a parser
-  // to be async (awaiting API calls) would break the sync `processCommand` signature 
-  // used by `TerminalWidget.tsx`.
-  // To fix this properly: TerminalWidget needs to handle async commands.
-  
-  return { output: "Command processed (Simulation Mode)", status: 'success' };
+// --- COMMAND PARSER (Browser Implementation of CLI) ---
+// This allows the Web Terminal to mimic the CLI behavior by hitting the API directly
+
+export const processCommand = async (cmdStr: string): Promise<{ output: any; status: 'success' | 'error' | 'pending' | 'system' }> => {
+    if (!cmdStr.trim()) return { output: '', status: 'system' };
+
+    const args = cmdStr.match(/(?:[^\s"]+|"[^"]*")+/g)?.map(a => a.replace(/"/g, '')) || [];
+    const base = args[0];
+    const noun = args[1];
+    const verb = args[2];
+
+    if (base !== 'telecom') {
+        return { output: 'Command not found. Try "telecom help".', status: 'error' };
+    }
+
+    try {
+        if (noun === 'call') {
+            if (verb === 'dial') {
+                const to = args[3];
+                const fromIdx = args.indexOf('--from');
+                const from = fromIdx > -1 ? args[fromIdx + 1] : undefined;
+
+                if (!to) throw new Error("Missing argument: <to>");
+
+                if (USE_REAL_API) {
+                    const res = await apiRequest('/v1/calls/dial', 'POST', { to, from });
+                    return { output: JSON.stringify(res, null, 2), status: 'success' };
+                } else {
+                    return { output: "Simulated Call Initiated: CA_MOCK_123", status: 'success' };
+                }
+            }
+            if (verb === 'merge') {
+                const sidA = args[3];
+                const sidB = args[4];
+                if (!sidA || !sidB) throw new Error("Missing arguments: <sidA> <sidB>");
+
+                if (USE_REAL_API) {
+                    const res = await apiRequest('/v1/conferences/merge', 'POST', { callSidA: sidA, callSidB: sidB });
+                    return { output: JSON.stringify(res, null, 2), status: 'success' };
+                } else {
+                    return { output: "Simulated Merge Requested", status: 'success' };
+                }
+            }
+            if (verb === 'list') {
+                if (USE_REAL_API) {
+                    const res = await apiRequest('/v1/calls');
+                    return { output: JSON.stringify(res, null, 2), status: 'success' };
+                }
+                return { output: JSON.stringify(mockCalls, null, 2), status: 'success' };
+            }
+        }
+
+        if (noun === 'sms') {
+            if (verb === 'send') {
+                const to = args[3];
+                // Handle message body which might be multiple args or quoted
+                let body = args.slice(4).join(' ');
+                if (!to || !body) throw new Error("Usage: telecom sms send <to> <message>");
+
+                if (USE_REAL_API) {
+                    const res = await apiRequest('/v1/sms/send', 'POST', { to, body });
+                    return { output: JSON.stringify(res, null, 2), status: 'success' };
+                }
+                return { output: "Simulated SMS Queued", status: 'success' };
+            }
+        }
+
+        if (noun === 'approvals') {
+            if (verb === 'list') {
+                if (USE_REAL_API) {
+                    const res = await apiRequest('/v1/approvals/pending');
+                    return { output: JSON.stringify(res, null, 2), status: 'success' };
+                }
+                return { output: JSON.stringify(mockApprovals, null, 2), status: 'success' };
+            }
+        }
+
+        if (noun === 'approve') {
+            const id = args[2];
+            if (!id) throw new Error("Missing argument: <id>");
+            if (USE_REAL_API) {
+                const res = await apiRequest(`/v1/approvals/${id}/decision`, 'POST', { decision: 'approve' });
+                return { output: JSON.stringify(res, null, 2), status: 'success' };
+            }
+            return { output: `Approved ${id} (Simulated)`, status: 'success' };
+        }
+
+        if (noun === 'deny') {
+            const id = args[2];
+            const reason = args[3]; // simplifed
+            if (!id) throw new Error("Missing argument: <id>");
+            if (USE_REAL_API) {
+                const res = await apiRequest(`/v1/approvals/${id}/decision`, 'POST', { decision: 'deny', reason });
+                return { output: JSON.stringify(res, null, 2), status: 'success' };
+            }
+            return { output: `Denied ${id} (Simulated)`, status: 'success' };
+        }
+
+        if (noun === 'status') {
+            const stats = await getStats();
+            return { output: JSON.stringify(stats, null, 2), status: 'success' };
+        }
+
+        if (noun === 'help') {
+            return {
+                output: `Available commands:
+  telecom call dial <to> [--from <num>]
+  telecom call merge <sidA> <sidB>
+  telecom call list
+  telecom sms send <to> <message>
+  telecom approvals list
+  telecom approve <id>
+  telecom deny <id>
+  telecom status`, status: 'system'
+            };
+        }
+
+        return { output: `Unknown command: ${noun} ${verb || ''}`, status: 'error' };
+
+    } catch (e: any) {
+        return { output: e.message || 'Error processing command', status: 'error' };
+    }
 };

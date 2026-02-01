@@ -4,9 +4,16 @@ import cors from '@fastify/cors';
 import twilio from 'twilio';
 import { reconcileWebhook } from './reconciler';
 import { Actions } from './actions';
-import { SmsSendSchema, CallDialSchema, ConferenceMergeSchema, ApprovalDecisionSchema } from '../../../packages/shared/schemas';
+import { SmsSendSchema, CallDialSchema, ConferenceMergeSchema, ApprovalDecisionSchema } from './schemas';
+import { PolicyEngine } from './policy';
 import { prisma } from './db';
-import { ActorSource, ApprovalStatus } from '@prisma/client';
+import { ActorSource, ApprovalStatus, Workspace } from '@prisma/client';
+import dotenv from 'dotenv';
+import path from 'path';
+import crypto from 'crypto';
+
+// Load .env
+dotenv.config();
 
 const server = Fastify({ logger: true });
 
@@ -19,6 +26,7 @@ const API_URL = process.env.TELECOM_API_URL || 'http://localhost:3000';
 
 interface AuthenticatedRequest extends FastifyRequest {
   workspaceId: string;
+  workspace: Workspace;
   actorSource: ActorSource;
 }
 
@@ -40,7 +48,8 @@ const requireAuth = async (req: FastifyRequest, reply: FastifyReply) => {
   }
 
   (req as AuthenticatedRequest).workspaceId = workspace.id;
-  
+  (req as AuthenticatedRequest).workspace = workspace;
+
   const sourceHeader = req.headers['x-actor-source'];
   if (sourceHeader === 'cli') (req as AuthenticatedRequest).actorSource = ActorSource.cli;
   else if (sourceHeader === 'telegram') (req as AuthenticatedRequest).actorSource = ActorSource.telegram;
@@ -56,8 +65,8 @@ const validateTwilioWebhook = async (req: FastifyRequest, reply: FastifyReply) =
   const authToken = process.env.TWILIO_AUTH_TOKEN;
 
   if (!authToken) {
-      req.log.warn("Skipping Twilio validation: No Auth Token");
-      return;
+    req.log.warn("Skipping Twilio validation: No Auth Token");
+    return;
   }
 
   // Construct the full URL for validation
@@ -67,8 +76,8 @@ const validateTwilioWebhook = async (req: FastifyRequest, reply: FastifyReply) =
   const isValid = twilio.validateRequest(authToken, signature || '', fullUrl, params);
 
   if (!isValid) {
-      req.log.warn({ msg: "Invalid Twilio Signature", signature, fullUrl });
-      return reply.code(403).send({ error: "Forbidden: Invalid Twilio Signature" });
+    req.log.warn({ msg: "Invalid Twilio Signature", signature, fullUrl });
+    return reply.code(403).send({ error: "Forbidden: Invalid Twilio Signature" });
   }
 };
 
@@ -76,12 +85,12 @@ const validateTwilioWebhook = async (req: FastifyRequest, reply: FastifyReply) =
 
 // Root route for easy health checking in browser
 server.get('/', async (req, reply) => {
-    return { 
-        service: 'Telecom Control Plane', 
-        version: '1.1.0', 
-        docs: '/docs (pending)',
-        health: '/v1/health'
-    };
+  return {
+    service: 'Telecom Control Plane',
+    version: '1.1.0',
+    docs: '/docs (pending)',
+    health: '/v1/health'
+  };
 });
 
 // 1. SYSTEM & HEALTH (DB-Backed)
@@ -105,51 +114,118 @@ server.get('/v1/health', async (req, reply) => {
 // 2. AGENT HEARTBEAT (Real)
 
 server.post('/v1/agent/heartbeat', { preHandler: requireAuth }, async (req, reply) => {
-    const request = req as AuthenticatedRequest;
-    const body = req.body as { status: string; currentTask?: string; label?: string };
-    
-    // Upsert agent state for this workspace
-    await prisma.agentState.upsert({
-        where: { workspaceId: request.workspaceId },
-        update: {
-            status: body.status || 'active',
-            currentTask: body.currentTask,
-            lastHeartbeatAt: new Date(),
-            label: body.label || 'OpenClaw'
-        },
-        create: {
-            workspaceId: request.workspaceId,
-            status: body.status || 'active',
-            currentTask: body.currentTask,
-            lastHeartbeatAt: new Date(),
-            label: body.label || 'OpenClaw'
-        }
-    });
+  const request = req as AuthenticatedRequest;
+  const body = req.body as { status: string; currentTask?: string; label?: string };
 
-    return { status: 'ok' };
+  // Upsert agent state for this workspace
+  await prisma.agentState.upsert({
+    where: { workspaceId: request.workspaceId },
+    update: {
+      status: body.status || 'active',
+      currentTask: body.currentTask,
+      lastHeartbeatAt: new Date(),
+      label: body.label || 'OpenClaw'
+    },
+    create: {
+      workspaceId: request.workspaceId,
+      status: body.status || 'active',
+      currentTask: body.currentTask,
+      lastHeartbeatAt: new Date(),
+      label: body.label || 'OpenClaw'
+    }
+  });
+
+  return { status: 'ok' };
+});
+
+// --- ONBOARDING & SETUP ---
+
+// Public: Create a new workspace (Genesis)
+server.post('/v1/provision', async (req, reply) => {
+  const body = req.body as { name: string; email?: string }; // Simple schema
+  const name = body.name || `Workspace-${Date.now()}`;
+
+  // Generate a secure API key
+  const apiToken = `sk_${crypto.randomBytes(24).toString('hex')}`;
+
+  const workspace = await prisma.workspace.create({
+    data: {
+      name,
+      apiToken,
+      settings: { maxConcurrentCalls: 1 },
+      policies: {
+        requireApproval: [],
+        allowedRegions: ['US', 'CA']
+      }
+    }
+  });
+
+  req.log.info({ msg: 'Workspace provisioned', id: workspace.id, name: workspace.name });
+
+  return {
+    status: 'created',
+    workspaceId: workspace.id,
+    apiToken: workspace.apiToken,
+    name: workspace.name
+  };
+});
+
+// Protected: Configure Provider (Twilio)
+server.post('/v1/setup/provider', { preHandler: requireAuth }, async (req, reply) => {
+  const request = req as AuthenticatedRequest;
+  const body = req.body as { accountSid: string; authToken: string; fromNumber: string };
+
+  if (!body.accountSid || !body.authToken || !body.fromNumber) {
+    return reply.status(400).send({ error: 'Missing credentials' });
+  }
+
+  // 1. Validate Credentials by fetching Account info
+  try {
+    const testClient = twilio(body.accountSid, body.authToken);
+    await testClient.api.v2010.accounts(body.accountSid).fetch();
+  } catch (e) {
+    req.log.warn({ msg: 'Failed to validate Twilio creds', error: e });
+    return reply.status(400).send({ error: 'Invalid Twilio Credentials', details: (e as any).message });
+  }
+
+  // 2. Save to Workspace
+  await prisma.workspace.update({
+    where: { id: request.workspaceId },
+    data: {
+      providerConfig: {
+        twilio: {
+          accountSid: body.accountSid,
+          authToken: body.authToken,
+          phoneNumber: body.fromNumber // Store preferred 'from'
+        }
+      }
+    }
+  });
+
+  return { status: 'configured', provider: 'twilio' };
 });
 
 server.get('/v1/agent/status', { preHandler: requireAuth }, async (req, reply) => {
-    const request = req as AuthenticatedRequest;
-    
-    const state = await prisma.agentState.findUnique({
-        where: { workspaceId: request.workspaceId }
-    });
+  const request = req as AuthenticatedRequest;
 
-    if (!state) {
-        return { online: false, status: 'offline', lastHeartbeatAt: null };
-    }
+  const state = await prisma.agentState.findUnique({
+    where: { workspaceId: request.workspaceId }
+  });
 
-    // "Online" definition: heartbeat within last 60 seconds
-    const isOnline = (Date.now() - state.lastHeartbeatAt.getTime()) < 60000;
+  if (!state) {
+    return { online: false, status: 'offline', lastHeartbeatAt: null };
+  }
 
-    return {
-        online: isOnline,
-        status: isOnline ? state.status : 'offline',
-        label: state.label,
-        currentTask: state.currentTask,
-        lastHeartbeatAt: state.lastHeartbeatAt
-    };
+  // "Online" definition: heartbeat within last 60 seconds
+  const isOnline = (Date.now() - state.lastHeartbeatAt.getTime()) < 60000;
+
+  return {
+    online: isOnline,
+    status: isOnline ? state.status : 'offline',
+    label: state.label,
+    currentTask: state.currentTask,
+    lastHeartbeatAt: state.lastHeartbeatAt
+  };
 });
 
 
@@ -182,8 +258,8 @@ server.post('/webhooks/twilio/sms', { preHandler: validateTwilioWebhook }, async
 });
 
 server.post('/webhooks/twilio/twiml/outbound', { preHandler: validateTwilioWebhook }, async (req, reply) => {
-    reply.type('text/xml');
-    return `<?xml version="1.0" encoding="UTF-8"?><Response><Say>Connecting your call.</Say></Response>`;
+  reply.type('text/xml');
+  return `<?xml version="1.0" encoding="UTF-8"?><Response><Say>Connecting your call.</Say></Response>`;
 });
 
 // 4. PROTECTED API
@@ -196,8 +272,25 @@ server.register(async (api) => {
   api.post('/v1/sms/send', async (req, reply) => {
     const request = req as AuthenticatedRequest;
     const body = SmsSendSchema.parse(req.body);
-    const result = await Actions.sms(request.workspaceId, body.to, body.body, request.actorSource);
-    
+
+    // Policy Check
+    const policyResult = await PolicyEngine.check(
+      request.workspace,
+      'sms.send',
+      body,
+      request.actorSource,
+      'API User'
+    );
+
+    if (policyResult.requiresApproval) {
+      return reply.status(202).send({
+        status: 'pending_approval',
+        approvalId: policyResult.approvalId
+      });
+    }
+
+    const result = await Actions.sms(request.workspace, body.to, body.body, request.actorSource);
+
     await prisma.auditLog.create({
       data: {
         workspaceId: request.workspaceId,
@@ -210,34 +303,78 @@ server.register(async (api) => {
         data: body
       }
     });
-    return result;
+
+    return {
+      messageId: result.messageSid,
+      status: 'queued',
+      approval: 'none'
+    };
   });
 
   api.post('/v1/calls/dial', async (req, reply) => {
     const request = req as AuthenticatedRequest;
     const body = CallDialSchema.parse(req.body);
-    const result = await Actions.dial(request.workspaceId, body.to, body.from, request.actorSource);
-    
-    await prisma.auditLog.create({
-        data: {
-          workspaceId: request.workspaceId,
-          actorSource: request.actorSource,
-          actorLabel: 'API User',
-          action: 'call.dial',
-          entityType: 'CallLeg',
-          entityId: result.callSid,
-          ok: true,
-          data: body
-        }
+
+    // Policy Check
+    const policyResult = await PolicyEngine.check(
+      request.workspace,
+      'call.dial',
+      body,
+      request.actorSource,
+      'API User'
+    );
+
+    if (policyResult.requiresApproval) {
+      return reply.status(202).send({
+        status: 'pending_approval',
+        approvalId: policyResult.approvalId
       });
-    return result;
+    }
+
+    const result = await Actions.dial(request.workspace, body.to, body.from, request.actorSource);
+
+    await prisma.auditLog.create({
+      data: {
+        workspaceId: request.workspaceId,
+        actorSource: request.actorSource,
+        actorLabel: 'API User',
+        action: 'call.dial',
+        entityType: 'CallLeg',
+        entityId: result.callSid,
+        ok: true,
+        data: body
+      }
+    });
+
+    return {
+      callId: result.callSid,
+      status: 'initiated',
+      approval: 'none'
+    };
   });
 
   api.post('/v1/conferences/merge', async (req, reply) => {
     const request = req as AuthenticatedRequest;
     const body = ConferenceMergeSchema.parse(req.body);
-    const result = await Actions.merge(request.workspaceId, body.callSidA, body.callSidB, request.actorSource);
-    
+
+    // Policy Check
+    const policyResult = await PolicyEngine.check(
+      request.workspace,
+      'conference.merge',
+      body,
+      request.actorSource,
+      'API User'
+    );
+
+    if (policyResult.requiresApproval) {
+      return reply.status(202).send({
+        status: 'pending_approval',
+        approvalId: policyResult.approvalId
+      });
+    }
+
+    const result = await Actions.merge(request.workspace, body.callSidA, body.callSidB, request.actorSource);
+
     await prisma.auditLog.create({
       data: {
         workspaceId: request.workspaceId,
@@ -250,127 +387,134 @@ server.register(async (api) => {
         data: body
       }
     });
-    return result;
+
+    return { status: 'merging', conferenceId: result.friendlyName };
   });
 
   // --- READS ---
 
   api.get('/v1/calls', async (req, reply) => {
-     const request = req as AuthenticatedRequest;
-     return prisma.callLeg.findMany({
-         where: { 
-             workspaceId: request.workspaceId,
-             state: { in: ['initiated', 'ringing', 'in_progress'] }
-         },
-         orderBy: { createdAt: 'desc' },
-         take: 50
-     });
+    const request = req as AuthenticatedRequest;
+    return prisma.callLeg.findMany({
+      where: {
+        workspaceId: request.workspaceId,
+        state: { in: ['initiated', 'ringing', 'in_progress'] }
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50
+    });
   });
 
   api.get('/v1/conferences', async (req, reply) => {
-     const request = req as AuthenticatedRequest;
-     return prisma.conference.findMany({
-         where: { 
-             workspaceId: request.workspaceId,
-             state: 'in_progress'
-         },
-         include: { participants: true },
-         orderBy: { startedAt: 'desc' }
-     });
+    const request = req as AuthenticatedRequest;
+    return prisma.conference.findMany({
+      where: {
+        workspaceId: request.workspaceId,
+        state: 'in_progress'
+      },
+      include: { participants: true },
+      orderBy: { startedAt: 'desc' }
+    });
   });
 
   api.get('/v1/status/recent', async (req, reply) => {
-     const request = req as AuthenticatedRequest;
-     const calls = await prisma.callLeg.findMany({
-         where: { workspaceId: request.workspaceId },
-         orderBy: { createdAt: 'desc' },
-         take: 20,
-         include: { participants: true }
-     });
-     const conferences = await prisma.conference.findMany({
-         where: { 
-             workspaceId: request.workspaceId,
-             state: 'in_progress' 
-         },
-         include: { participants: true }
-     });
-     const stats = {
-         activeCalls: calls.filter(c => c.state === 'in_progress' || c.state === 'ringing').length,
-         activeConferences: conferences.length,
-         smsToday: await prisma.smsMessage.count({ where: { workspaceId: request.workspaceId } }),
-         pendingApprovals: await prisma.approval.count({ where: { workspaceId: request.workspaceId, status: ApprovalStatus.pending } })
-     };
-     return { calls, conferences, stats };
+    const request = req as AuthenticatedRequest;
+    const calls = await prisma.callLeg.findMany({
+      where: { workspaceId: request.workspaceId },
+      orderBy: { createdAt: 'desc' },
+      take: 20,
+      include: { participants: true }
+    });
+    const conferences = await prisma.conference.findMany({
+      where: {
+        workspaceId: request.workspaceId,
+        state: 'in_progress'
+      },
+      include: { participants: true }
+    });
+    const stats = {
+      activeCalls: calls.filter(c => c.state === 'in_progress' || c.state === 'ringing').length,
+      activeConferences: conferences.length,
+      smsToday: await prisma.smsMessage.count({ where: { workspaceId: request.workspaceId } }),
+      pendingApprovals: await prisma.approval.count({ where: { workspaceId: request.workspaceId, status: ApprovalStatus.pending } }),
+
+      // Setup Config Status
+      isConfigured: !!(request.workspace.providerConfig as any)?.twilio?.accountSid
+    };
+    return { calls, conferences, stats };
   });
 
   api.get('/v1/sms/recent', async (req, reply) => {
-      const request = req as AuthenticatedRequest;
-      return prisma.smsMessage.findMany({
-          where: { workspaceId: request.workspaceId },
-          orderBy: { createdAt: 'desc' },
-          take: 50
-      });
+    const request = req as AuthenticatedRequest;
+    return prisma.smsMessage.findMany({
+      where: { workspaceId: request.workspaceId },
+      orderBy: { createdAt: 'desc' },
+      take: 50
+    });
   });
 
   api.get('/v1/audit/recent', async (req, reply) => {
     const request = req as AuthenticatedRequest;
     return prisma.auditLog.findMany({
-        where: { workspaceId: request.workspaceId },
-        orderBy: { createdAt: 'desc' },
-        take: 100
+      where: { workspaceId: request.workspaceId },
+      orderBy: { createdAt: 'desc' },
+      take: 100
     });
   });
 
   // --- APPROVALS ---
 
   api.get('/v1/approvals/pending', async (req, reply) => {
-      const request = req as AuthenticatedRequest;
-      return prisma.approval.findMany({
-          where: { 
-              workspaceId: request.workspaceId,
-              status: ApprovalStatus.pending
-          },
-          orderBy: { createdAt: 'desc' }
-      });
+    const request = req as AuthenticatedRequest;
+    return prisma.approval.findMany({
+      where: {
+        workspaceId: request.workspaceId,
+        status: ApprovalStatus.pending
+      },
+      orderBy: { createdAt: 'desc' }
+    });
   });
 
   api.post('/v1/approvals/:id/decision', async (req, reply) => {
-      const request = req as AuthenticatedRequest;
-      const { id } = req.params as { id: string };
-      const body = ApprovalDecisionSchema.parse(req.body);
-      
-      const approval = await prisma.approval.findUnique({ where: { id } });
-      if (!approval || approval.workspaceId !== request.workspaceId) {
-          return reply.status(404).send({ error: 'Approval not found' });
+    const request = req as AuthenticatedRequest;
+    const { id } = req.params as { id: string };
+    const body = ApprovalDecisionSchema.parse(req.body);
+
+    const approval = await prisma.approval.findUnique({ where: { id } });
+    if (!approval || approval.workspaceId !== request.workspaceId) {
+      return reply.status(404).send({ error: 'Approval not found' });
+    }
+
+    const status = body.decision === 'approve' ? ApprovalStatus.approved : ApprovalStatus.denied;
+
+    const updated = await prisma.approval.update({
+      where: { id },
+      data: {
+        status,
+        decidedAt: new Date(),
+        decidedBy: 'API User',
+        reason: body.reason
       }
+    });
 
-      const status = body.decision === 'approve' ? ApprovalStatus.approved : ApprovalStatus.denied;
-
-      const updated = await prisma.approval.update({
-          where: { id },
-          data: {
-              status,
-              decidedAt: new Date(),
-              decidedBy: 'API User',
-              reason: body.reason
-          }
-      });
-
-      if (status === ApprovalStatus.approved) {
-          if (approval.type === 'conference_merge') {
-               const payload = approval.payload as any;
-               Actions.merge(request.workspaceId, payload.callSidA, payload.callSidB, request.actorSource).catch(console.error);
-          }
+    if (status === ApprovalStatus.approved) {
+      if (approval.type === 'conference_merge') {
+        const payload = approval.payload as any;
+        Actions.merge(request.workspace, payload.callSidA, payload.callSidB, request.actorSource).catch(console.error);
       }
+    }
 
-      return updated;
+    return updated;
   });
 
 });
 
 const start = async () => {
   try {
-    const requiredEnv = ['DATABASE_URL', 'TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN'];
+    const requiredEnv = ['DATABASE_URL', 'TWILIO_ACCOUNT_SID'];
+    if (!process.env.TWILIO_AUTH_TOKEN && (!process.env.TWILIO_API_KEY || !process.env.TWILIO_API_SECRET)) {
+      console.warn(`⚠️  Missing Twilio Authentication. Set TWILIO_AUTH_TOKEN -OR- TWILIO_API_KEY + TWILIO_API_SECRET.`);
+    }
     const missing = requiredEnv.filter(k => !process.env[k]);
     if (missing.length > 0) {
       console.warn(`⚠️  Missing ENV variables: ${missing.join(', ')}. API will likely fail.`);
