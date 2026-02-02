@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldAlert, CheckCircle, Loader2 } from 'lucide-react';
+import { ShieldAlert, CheckCircle, Loader2, X } from 'lucide-react';
 import { setupProvider } from '../services/mockService';
 
 interface OnboardingModalProps {
@@ -13,6 +13,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
     const [fromNumber, setFromNumber] = useState('');
     const [status, setStatus] = useState<'idle' | 'submitting' | 'error' | 'success'>('idle');
     const [errorMsg, setErrorMsg] = useState('');
+
+    React.useEffect(() => {
+        if (isOpen) {
+            setStatus('idle');
+            // Optional: reset fields if you want them blank, or leave them if they persist in state
+            // setSid(''); setToken(''); 
+        }
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -33,7 +41,15 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="bg-gray-900 border border-gray-800 rounded-lg shadow-2xl max-w-md w-full p-6 space-y-6 relative overflow-hidden">
+            <div className="bg-[#0f1115] border border-gray-700 rounded-lg shadow-2xl max-w-md w-full p-6 space-y-6 relative overflow-hidden">
+
+                {/* Close Button */}
+                <button
+                    onClick={onComplete}
+                    className="absolute top-4 right-4 text-gray-500 hover:text-white transition-colors"
+                >
+                    <X size={20} />
+                </button>
 
                 {/* Header */}
                 <div className="text-center space-y-2">
@@ -53,20 +69,8 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
                 ) : (
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
-                            <label className="text-xs font-mono text-gray-500 uppercase">Account SID</label>
-                            <input
-                                type="text"
-                                value={sid}
-                                onChange={e => setSid(e.target.value)}
-                                placeholder="AC..."
-                                className="w-full bg-gray-950 border border-gray-800 rounded px-3 py-2 text-gray-200 mt-1 focus:border-blue-500 outline-none font-mono text-sm"
-                                required
-                            />
-                        </div>
-
-                        <div>
-                            <div className="flex justify-between items-center">
-                                <label className="text-xs font-mono text-gray-500 uppercase">Account SID</label>
+                            <div className="flex justify-between items-center mb-1">
+                                <label className="text-xs font-mono text-gray-300 font-bold uppercase tracking-wider">Account SID</label>
                                 <a href="https://console.twilio.com/" target="_blank" rel="noreferrer" className="text-[10px] text-blue-400 hover:text-blue-300 hover:underline">Find in Twilio Console ↗</a>
                             </div>
                             <input
@@ -74,14 +78,14 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
                                 value={sid}
                                 onChange={e => setSid(e.target.value)}
                                 placeholder="AC..."
-                                className="w-full bg-gray-950 border border-gray-800 rounded px-3 py-2 text-gray-200 mt-1 focus:border-blue-500 outline-none font-mono text-sm"
+                                className="w-full bg-gray-950 border border-gray-700 rounded px-3 py-2 text-white mt-1 focus:border-blue-500 outline-none font-mono text-sm placeholder:text-gray-600"
                                 required
                             />
                         </div>
 
                         <div>
-                            <div className="flex justify-between items-center">
-                                <label className="text-xs font-mono text-gray-500 uppercase">Auth Token</label>
+                            <div className="flex justify-between items-center mb-1">
+                                <label className="text-xs font-mono text-gray-300 font-bold uppercase tracking-wider">Auth Token</label>
                                 <a href="https://console.twilio.com/" target="_blank" rel="noreferrer" className="text-[10px] text-blue-400 hover:text-blue-300 hover:underline">Where is this? ↗</a>
                             </div>
                             <input
@@ -89,19 +93,19 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
                                 value={token}
                                 onChange={e => setToken(e.target.value)}
                                 placeholder="••••••••••••••••"
-                                className="w-full bg-gray-950 border border-gray-800 rounded px-3 py-2 text-gray-200 mt-1 focus:border-blue-500 outline-none font-mono text-sm"
+                                className="w-full bg-gray-950 border border-gray-700 rounded px-3 py-2 text-white mt-1 focus:border-blue-500 outline-none font-mono text-sm placeholder:text-gray-600"
                                 required
                             />
                         </div>
 
                         <div>
-                            <label className="text-xs font-mono text-gray-500 uppercase">Default From Number</label>
+                            <label className="text-xs font-mono text-gray-300 font-bold uppercase tracking-wider mb-1 block">Default From Number</label>
                             <input
                                 type="text"
                                 value={fromNumber}
                                 onChange={e => setFromNumber(e.target.value)}
                                 placeholder="+1..."
-                                className="w-full bg-gray-950 border border-gray-800 rounded px-3 py-2 text-gray-200 mt-1 focus:border-blue-500 outline-none font-mono text-sm"
+                                className="w-full bg-gray-950 border border-gray-700 rounded px-3 py-2 text-white mt-1 focus:border-blue-500 outline-none font-mono text-sm placeholder:text-gray-600"
                                 required
                             />
                         </div>

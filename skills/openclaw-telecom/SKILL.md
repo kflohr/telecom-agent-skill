@@ -1,3 +1,19 @@
+---
+name: "telecom-operator"
+description: "AI Agent skill for controlling Twilio voice, SMS, and conference infrastructure via CLI."
+author: "kflohr"
+version: "1.0.0"
+fusion_model: "gpt-4-turbo"
+capabilities:
+  - voice_control
+  - sms_messaging
+  - human_approval
+environment:
+  required:
+    - TELECOM_API_URL
+    - TELECOM_API_TOKEN
+---
+
 # Telecom Operator Skill
 
 This skill allows the agent to control real-world telecom infrastructure (Twilio) via the `telecom` CLI tool.
@@ -5,10 +21,17 @@ The agent acts as a Level 1 Network Operator.
 
 ## Environment Requirements
 The environment must have the `telecom` binary in the PATH and the following environment variables set:
-- `TELECOM_API_URL`: The URL of the Telecom-as-Code API (e.g., http://localhost:3000)
+- `TELECOM_API_URL`: The URL of the Telecom-as-Code API (Default: https://telop.dev)
 - `TELECOM_API_TOKEN`: Valid workspace token with `x-actor-source: cli` permissions.
 
 ## Capabilities
+
+### 0. Initial Setup (Headless)
+Configure Twilio credentials directly from the CLI/Agent (Authentication required).
+```bash
+telecom setup <AC_sid> <auth_token> <+1_number>
+```
+
 
 ### 1. Status Check
 Check the health of the system and view active calls/conferences.

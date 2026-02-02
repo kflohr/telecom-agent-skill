@@ -1,33 +1,37 @@
 import React, { useEffect, useState } from 'react';
 import { TerminalWidget } from '../components/TerminalWidget';
-import { OnboardingModal } from '../components/OnboardingModal';
-import { getStats, getCalls, getConferences } from '../services/mockService';
+import { getStats, getCalls, getConferences, processCommand, getTrafficHistory } from '../services/mockService';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { MOCK_CHART_DATA } from '../constants';
-import { Phone, Users, MessageSquare, ShieldAlert, GitMerge, Mic, MicOff, PlusCircle } from 'lucide-react';
+import { Phone, Users, MessageSquare, ShieldAlert, GitMerge, Mic, MicOff, PlusCircle, Settings } from 'lucide-react';
 import { CallState, CallLeg, Conference, ConferenceState } from '../types';
 
-export const Dashboard: React.FC = () => {
+interface DashboardProps {
+  onConfigure?: () => void;
+}
+
+export const Dashboard: React.FC<DashboardProps> = ({ onConfigure }) => {
   const [stats, setStats] = useState<any>({ activeCalls: 0, activeConferences: 0, smsToday: 0, pendingApprovals: 0 });
   const [activeCalls, setActiveCalls] = useState<CallLeg[]>([]);
   const [activeConferences, setActiveConferences] = useState<Conference[]>([]);
+  const [trafficData, setTrafficData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showOnboarding, setShowOnboarding] = useState(false);
 
   useEffect(() => {
     const refresh = async () => {
       try {
-        const [newStats, calls, conferences] = await Promise.all([
+        const [newStats, calls, conferences, traffic] = await Promise.all([
           getStats(),
           getCalls(),
-          getConferences()
+          getConferences(),
+          getTrafficHistory()
         ]);
 
         setStats(newStats);
+        setTrafficData(traffic);
 
         // Check Config Status
-        if (newStats.isConfigured === false) {
-          setShowOnboarding(true);
+        if (newStats.isConfigured === false && onConfigure) {
+          onConfigure();
         }
 
         // Filter logic
@@ -49,13 +53,12 @@ export const Dashboard: React.FC = () => {
     refresh();
     const interval = setInterval(refresh, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [onConfigure]);
 
   if (isLoading && stats.activeCalls === 0) return <div className="p-8 text-gray-500">Loading Control Plane...</div>;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
-      <OnboardingModal isOpen={showOnboarding} onComplete={() => setShowOnboarding(false)} />
 
       {/* Mock Mode Banner */}
       {stats.isMock && (
@@ -114,11 +117,42 @@ export const Dashboard: React.FC = () => {
             <h2 className="text-lg font-semibold text-gray-200">Operator Console</h2>
             <div className="flex gap-2 items-center">
               <button
-                onClick={() => confirm('Place test call to +15550000000?') && console.log('Test call initiated')}
-                className="bg-emerald-900/30 hover:bg-emerald-900/50 text-emerald-400 text-xs px-3 py-1 rounded border border-emerald-800 transition-colors flex items-center gap-1"
+                onClick={async () => {
+                  if (stats.isConfigured === false) {
+                    onConfigure?.();
+                    return;
+                  }
+
+                  const number = prompt('Enter phone number (E.164 format):', '+15550000000');
+                  if (!number) return;
+
+                  if (!/^\+?[1-9]\d{1,14}$/.test(number)) {
+                    alert('Please enter a valid phone number (e.g. +14155552671)');
+                    return;
+                  }
+
+                  await processCommand(`telecom call dial ${number} --from +1234567890`);
+                }}
+                className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs px-3 py-1.5 rounded-md border border-emerald-500/20 transition-all flex items-center gap-2 font-medium"
               >
-                <Phone size={12} /> Test Call
+                <Phone size={12} /> {stats.isConfigured === false ? 'Setup Test Call' : 'Test Call Simulation'}
               </button>
+              {stats.isConfigured === false ? (
+                <button
+                  onClick={() => onConfigure?.()}
+                  className="bg-red-600 hover:bg-red-500 text-white text-xs px-3 py-1 rounded shadow-lg shadow-red-900/20 animate-pulse font-medium border border-red-500 flex items-center gap-1.5 transition-colors"
+                >
+                  <ShieldAlert size={12} /> Setup Connection
+                </button>
+              ) : (
+                <button
+                  onClick={() => onConfigure?.()}
+                  className="bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white text-xs px-2 py-1 rounded border border-gray-700 transition-colors flex items-center gap-1"
+                  title="Configure API Credentials"
+                >
+                  <Settings size={12} />
+                </button>
+              )}
               <span className="text-xs font-mono text-gray-500 bg-gray-900 px-2 py-1 rounded border border-gray-800">CLI: v1.1.0</span>
               <span className="text-xs font-mono text-blue-400 bg-blue-900/20 px-2 py-1 rounded border border-blue-900/50">ENV: PROD</span>
             </div>
@@ -207,13 +241,40 @@ export const Dashboard: React.FC = () => {
         <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">24h Traffic Volume</h3>
         <div className="h-48 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={MOCK_CHART_DATA}>
-              <XAxis dataKey="time" stroke="#4b5563" fontSize={12} />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#111827', border: '1px solid #374151' }}
-                itemStyle={{ color: '#e5e7eb' }}
+            <BarChart data={trafficData}>
+              <defs>
+                <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1} />
+                </linearGradient>
+              </defs>
+              <XAxis
+                dataKey="time"
+                stroke="#4b5563"
+                fontSize={10}
+                tickLine={false}
+                axisLine={false}
+                interval={3} // Show every 3rd label for cleanliness
               />
-              <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={40} />
+              <Tooltip
+                cursor={{ fill: '#1f2937', opacity: 0.4 }}
+                contentStyle={{
+                  backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                  border: '1px solid rgba(75, 85, 99, 0.4)',
+                  borderRadius: '8px',
+                  backdropFilter: 'blur(4px)',
+                  boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                }}
+                itemStyle={{ color: '#60a5fa', fontSize: '12px', fontWeight: 500 }}
+                labelStyle={{ color: '#9ca3af', marginBottom: '4px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+              />
+              <Bar
+                dataKey="value"
+                fill="url(#barGradient)"
+                radius={[4, 4, 0, 0]}
+                barSize={20}
+                animationDuration={1500}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Sidebar } from './components/Sidebar';
+import { OnboardingModal } from './components/OnboardingModal';
 import { Dashboard } from './pages/Dashboard';
 import { Approvals } from './pages/Approvals';
 import { Audit } from './pages/Audit';
@@ -10,11 +11,12 @@ import { Documentation } from './pages/Documentation';
 
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <Dashboard />;
+        return <Dashboard onConfigure={() => setShowOnboarding(true)} />;
       case 'approvals':
         return <Approvals />;
       case 'audit':
@@ -52,7 +54,8 @@ const App: React.FC = () => {
 
   return (
     <div className="flex h-screen bg-gray-950 text-gray-100 font-sans">
-      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+      <OnboardingModal isOpen={showOnboarding} onComplete={() => setShowOnboarding(false)} />
+      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} onConfigure={() => setShowOnboarding(true)} />
 
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Top Header */}
@@ -65,9 +68,11 @@ const App: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-4">
-            <button onClick={() => setActiveTab('docs')} className={`text-xs font-medium transition-colors ${activeTab === 'docs' ? 'text-white' : 'text-gray-400 hover:text-white'}`}>Docs</button>
-            <button className="text-xs font-medium text-gray-400 hover:text-white transition-colors">Support</button>
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-600 to-purple-600 border border-gray-700 shadow-inner"></div>
+            <button onClick={() => setActiveTab('docs')} className={`text-xs font-medium transition-colors ${activeTab === 'docs' ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}>Docs</button>
+            <a href="mailto:support@telop.dev" className="text-xs font-medium text-gray-500 hover:text-gray-300 transition-colors">Support</a>
+            <div className="w-8 h-8 rounded-full bg-gray-900 border border-gray-800 flex items-center justify-center hover:border-gray-700 transition-colors">
+              <div className="w-4 h-4 rounded-full bg-gray-600"></div>
+            </div>
           </div>
         </header>
 

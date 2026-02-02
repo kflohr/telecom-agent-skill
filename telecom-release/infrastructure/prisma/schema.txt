@@ -1,0 +1,206 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ActorSource {
+  api
+  cli
+  telegram
+  openclaw
+  system
+}
+
+enum CallState {
+  initiated
+  ringing
+  in_progress
+  completed
+  busy
+  no_answer
+  failed
+  canceled
+}
+
+enum SmsStatus {
+  queued
+  sending
+  sent
+  delivered
+  undelivered
+  failed
+  received
+}
+
+enum SmsDirection {
+  inbound
+  outbound
+  outbound_api
+  outbound_reply
+}
+
+enum ConferenceState {
+  created
+  in_progress
+  completed
+}
+
+enum ApprovalStatus {
+  pending
+  approved
+  denied
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  apiToken  String   @unique
+  settings  Json?    // { maxConcurrentCalls: number }
+  providerConfig Json? // { twilio: { accountSid: "...", authToken: "..." } }
+  policies       Json? // { requireApproval: ["call.dial"], allowedRegions: ["US"] }
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  calls     CallLeg[]
+  messages  SmsMessage[]
+  auditLogs AuditLog[]
+}
+
+model CallLeg {
+  id          String   @id @default(cuid())
+  workspaceId String?
+  callSid     String?  @unique
+  direction   String
+  from        String
+  to          String
+  label       String?
+  state       CallState
+  
+  startedAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  endedAt     DateTime?
+  duration    Int?
+  
+  rawLastEvent Json?
+
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id])
+  participants Participant[]
+}
+
+model Conference {
+  id            String   @id @default(cuid())
+  workspaceId   String?
+  conferenceSid String?  @unique
+  friendlyName  String
+  state         ConferenceState
+
+  startedAt     DateTime @default(now())
+  endedAt       DateTime?
+
+  participants  Participant[]
+}
+
+model Participant {
+  id             String   @id @default(cuid())
+  participantSid String   @unique
+  callSid        String
+  conferenceSid  String?  // Made optional as we might link via ID
+  conferenceId   String
+  
+  muted          Boolean  @default(false)
+  onHold         Boolean  @default(false)
+  
+  joinedAt       DateTime @default(now())
+  leftAt         DateTime?
+
+  call           CallLeg    @relation(fields: [callSid], references: [callSid])
+  conference     Conference @relation(fields: [conferenceId], references: [id])
+}
+
+model SmsMessage {
+  id          String   @id @default(cuid())
+  workspaceId String?
+  messageSid  String?  @unique
+  direction   SmsDirection
+  status      SmsStatus
+  
+  from        String
+  to          String
+  body        String
+  bodyHash    String?
+  errorMessage String?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deliveredAt DateTime?
+  receivedAt  DateTime?
+  
+  rawLastEvent Json?
+
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id])
+}
+
+model Approval {
+  id          String   @id @default(cuid())
+  workspaceId String?
+  status      ApprovalStatus
+  type        String   // call_dial, etc.
+  
+  actorSource ActorSource
+  actorLabel  String
+  
+  action      String
+  payload     Json
+  
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime?
+  
+  decidedAt   DateTime?
+  decidedBy   String?
+  reason      String?
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  actorSource ActorSource
+  actorLabel  String
+  
+  action      String
+  entityType  String
+  entityId    String
+  
+  ok          Boolean
+  error       String?
+  data        Json?
+  
+  createdAt   DateTime @default(now())
+  
+  workspaceId String?  // Added based on code usage
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id])
+}
+
+model AgentState {
+  id              String   @id @default(cuid())
+  workspaceId     String   @unique
+  status          String
+  currentTask     String?
+  lastHeartbeatAt DateTime
+  label           String?
+}
+
+model WebhookEvent {
+  id          String   @id @default(cuid())
+  workspaceId String?
+  provider    String
+  eventKey    String   @unique
+  eventType   String
+  payloadHash String
+  payload     Json
+  createdAt   DateTime @default(now())
+}

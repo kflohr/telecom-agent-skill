@@ -19,13 +19,33 @@ const API_TOKEN = env.VITE_API_TOKEN || 'demo-token';
 const USE_REAL_API = !!API_URL;
 
 // --- MOCK STATE (Fallback) ---
-let mockCalls: CallLeg[] = [
+// --- MOCK STATE (Fallback) ---
+// We use localStorage to persist the "Simulated" state across reloads for a better UX.
+
+const load = <T>(key: string, defaultVal: T): T => {
+    try {
+        const item = localStorage.getItem('telop_mock_' + key);
+        return item ? JSON.parse(item) : defaultVal;
+    } catch {
+        return defaultVal;
+    }
+};
+
+const save = (key: string, val: any) => {
+    try {
+        localStorage.setItem('telop_mock_' + key, JSON.stringify(val));
+    } catch (e) {
+        console.warn("Failed to save mock state", e);
+    }
+};
+
+let mockCalls: CallLeg[] = load('calls', [
     { id: '1', callSid: 'CA_MOCK_1', direction: 'outbound-api', from: '+14155550100', to: '+14155550199', state: CallState.IN_PROGRESS, startedAt: new Date(Date.now() - 1000 * 60 * 2).toISOString() },
-];
-let mockConferences: Conference[] = [];
-let mockMessages: SmsMessage[] = [];
-let mockApprovals: Approval[] = [];
-let mockAuditLogs: AuditLog[] = [];
+]);
+let mockConferences: Conference[] = load('conferences', []);
+let mockMessages: SmsMessage[] = load('messages', []);
+let mockApprovals: Approval[] = load('approvals', []);
+let mockAuditLogs: AuditLog[] = load('audit', []);
 
 // --- HELPER: API REQUEST ---
 const apiRequest = async (path: string, method: string = 'GET', body?: any) => {
@@ -113,6 +133,31 @@ export const getStats = async () => {
     };
 };
 
+export const getTrafficHistory = async () => {
+    if (USE_REAL_API) {
+        // Placeholder for real API
+        const data = await apiRequest('/v1/stats/traffic/24h').catch(() => []);
+        return data.length ? data : generateMockTraffic();
+    }
+    return generateMockTraffic();
+};
+
+const generateMockTraffic = () => {
+    const hours = [];
+    const now = new Date().getHours();
+    for (let i = 23; i >= 0; i--) {
+        const h = (now - i + 24) % 24;
+        const hourLabel = `${h.toString().padStart(2, '0')}:00`;
+        // Generate a pseudo-realistic curve (peak in mid-day)
+        let base = 20;
+        if (h >= 9 && h <= 17) base += 50; // Work hours peak
+        if (h >= 18 && h <= 22) base += 30; // Evening mini-peak
+        const value = Math.floor(base + Math.random() * 20);
+        hours.push({ time: hourLabel, value });
+    }
+    return hours;
+};
+
 export const getCalls = async (): Promise<CallLeg[]> => {
     if (USE_REAL_API) {
         const data = await apiRequest('/v1/status/recent'); // Optimized to get all in one go or use /v1/calls
@@ -158,6 +203,7 @@ export const executeHangup = async (callSid: string) => {
         return;
     }
     mockCalls = mockCalls.filter(c => c.callSid !== callSid);
+    save('calls', mockCalls);
 };
 
 export const executeHold = async (callSid: string, onHold: boolean) => {
@@ -183,6 +229,7 @@ export const executeSms = async (to: string, body: string) => {
         sentAt: new Date().toISOString()
     } as SmsMessage;
     mockMessages.unshift(msg);
+    save('messages', mockMessages);
     return msg;
 };
 
@@ -192,7 +239,10 @@ export const updateApproval = async (id: string, status: ApprovalStatus) => {
         return await apiRequest(`/v1/approvals/${id}/decision`, 'POST', { decision });
     }
     const idx = mockApprovals.findIndex(a => a.id === id);
-    if (idx !== -1) mockApprovals[idx].status = status;
+    if (idx !== -1) {
+        mockApprovals[idx].status = status;
+        save('approvals', mockApprovals);
+    }
 };
 
 export const setupProvider = async (accountSid: string, authToken: string, fromNumber: string) => {
@@ -233,7 +283,18 @@ export const processCommand = async (cmdStr: string): Promise<{ output: any; sta
                     const res = await apiRequest('/v1/calls/dial', 'POST', { to, from });
                     return { output: JSON.stringify(res, null, 2), status: 'success' };
                 } else {
-                    return { output: "Simulated Call Initiated: CA_MOCK_123", status: 'success' };
+                    const newCall: CallLeg = {
+                        id: Math.random().toString(),
+                        callSid: 'CA_' + Math.floor(Math.random() * 10000),
+                        direction: 'outbound-dial',
+                        from: from || 'Console',
+                        to,
+                        state: CallState.RINGING,
+                        startedAt: new Date().toISOString()
+                    };
+                    mockCalls.unshift(newCall);
+                    save('calls', mockCalls);
+                    return { output: `Dialing ${to}... (SID: ${newCall.callSid})`, status: 'success' };
                 }
             }
             if (verb === 'merge') {
