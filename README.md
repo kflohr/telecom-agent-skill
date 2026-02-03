@@ -1,7 +1,90 @@
 <div align="center">
   <h1>📡 Telecom-as-Code Control Plane</h1>
-  <p><strong>Infrastructure-as-Code for Voice & SMS | Human-in-the-Loop Safety | Real-Time Visibility</strong></p>
+  <p><strong>Infrastructure-as-Code for Voice & SMS | Human-in-the-Loop Safety | Autonomous Agents</strong></p>
 </div>
+
+---
+
+## 📖 Overview
+
+The **Telecom Control Plane** is a modern operations platform that brings **DevOps principles** to telephony. Instead of clicking through provider consoles (like Twilio) or managing state in spreadsheets, you manage your telecom infrastructure using **Code (CLI)** and a **Real-Time Dashboard**.
+
+It introduces a **Safety Layer** between your operators and the carrier network, allowing for governance, approvals, and audit trails.
+
+### Key Features
+
+*   **💻 CLI-First Operations**: Initiate calls, send SMS, and manage conferences directly from your terminal.
+*   **🛡️ Human-in-the-Loop Approvals**: High-risk actions (like bulk dialing or merging active lines) can be gated by policy.
+*   **📊 Real-Time Observability**: Live view of all active call legs, conferences, and message traffic.
+*   **🤖 Autonomous Agents**: Native tools for AI agents (OpenClaw/MoltBot) to make calls, record audio, and read transcripts ("Memory").
+
+## 🚀 Quick Start (Public Cloud)
+
+You don't need to deploy anything. We host the Control Plane for you at `telop.dev`.
+
+### 1. Installation
+
+Install the CLI tool globally via npm (or use it within your agent).
+```bash
+npm install -g @telecom/cli
+# Or clone this repo and link
+```
+
+### 2. Connect Your Twilio
+Run the onboarding wizard. This will securely store your Twilio keys locally and link them to your workspace on our cloud.
+```bash
+telecom onboard
+```
+
+### 3. Usage
+**Voice Operations**
+```bash
+# Dial a number
+telecom call dial +15550100
+
+# Merge two active calls
+telecom call merge CA123... CA456...
+```
+
+---
+
+## 🤖 OpenClaw / MoltBot Integration
+
+This project is designed as a **Skill** for Autonomous Agents.
+
+### Setup for MoltBot
+1.  **Install Skill**: Point your bot to this repository URL.
+    ```
+    /install https://github.com/kflohr/telecom-control-plane
+    ```
+2.  **Configure**:
+    *   The bot will need a Twilio Account SID & Auth Token.
+    *   Run `telecom onboard` inside the bot's environment (or pass env vars `TWILIO_ACCOUNT_SID` etc).
+
+### Capabilities
+Once installed, your bot can perform these actions:
+
+*   **🗣️ Speak & Listen**:
+    ```bash
+    telecom agent call <number> --intro "Hello, I am scheduling an appointment."
+    ```
+    *The bot calls the number, reads the intro text (TTS), and records the response.*
+
+*   **🧠 Memory (Transcription)**:
+    ```bash
+    telecom agent memory <CallSid>
+    ```
+    *The bot retrieves the text transcript of the call to understand what the user said.*
+
+---
+
+## 📚 Documentation
+*   **Web Dashboard**: [https://telop.dev](https://telop.dev)
+*   **API Docs**: [https://telop.dev/docs](https://telop.dev/docs)
+
+## 🛡️ License
+MIT License. Open Source.
+
 
 ---
 
