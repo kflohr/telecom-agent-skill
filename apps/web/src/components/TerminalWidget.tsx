@@ -79,8 +79,8 @@ export const TerminalWidget: React.FC = () => {
               </div>
             )}
             <div className={`whitespace-pre-wrap pl-6 ${entry.status === 'error' ? 'text-red-400' :
-                entry.status === 'pending' ? 'text-yellow-400' :
-                  entry.status === 'system' ? 'text-gray-500 italic' : 'text-emerald-400'
+              entry.status === 'pending' ? 'text-yellow-400' :
+                entry.status === 'system' ? 'text-gray-500 italic' : 'text-emerald-400'
               }`}>
               {entry.status === 'pending' ? <span className="animate-pulse">Processing...</span> : renderOutput(entry.output)}
             </div>
@@ -89,16 +89,16 @@ export const TerminalWidget: React.FC = () => {
         <div ref={bottomRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="p-4 bg-gray-900 border-t border-gray-800 flex items-center gap-3">
-        <div className="flex-1 bg-gray-950 border border-gray-700 rounded-lg flex items-center px-3 py-2 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500/50 transition-all">
-          <span className="text-blue-500 font-bold mr-2">➜</span>
+      <form onSubmit={handleSubmit} className="p-4 bg-gray-900 border-t border-gray-800 flex flex-col md:flex-row items-stretch md:items-center gap-3">
+        <div className="flex-1 bg-gray-950 border border-gray-700 rounded-lg flex items-center px-3 py-2 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500/50 transition-all overflow-hidden">
+          <span className="text-blue-500 font-bold mr-2 shrink-0">➜</span>
           <input
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             disabled={isProcessing}
-            className="flex-1 bg-transparent border-none outline-none text-gray-100 placeholder-gray-600 font-mono text-sm disabled:opacity-50"
-            placeholder="Try 'telecom help' or 'telecom call dial'"
+            className="flex-1 bg-transparent border-none outline-none text-gray-100 placeholder-gray-600 font-mono text-xs md:text-sm disabled:opacity-50 min-w-0 w-full"
+            placeholder="Try 'telecom help'"
             autoFocus
             spellCheck={false}
           />
