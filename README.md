@@ -1,13 +1,18 @@
-<div align="center">
-  <h1>📡 Telecom-as-Code Control Plane</h1>
-  <p><strong>Infrastructure-as-Code for Voice & SMS | Human-in-the-Loop Safety | Autonomous Agents</strong></p>
-</div>
+# 🔒 Telecom Control Plane (Core)
+> **Private Source Code for [Telop.dev](https://telop.dev)**
+
+This repository contains the **Backend API**, **Web Dashboard**, and **Database Schema** for the Telop platform.
+It is closed source.
+
+For the **Public Agent Skill** (CLI), see: [https://github.com/kflohr/telecom-agent-skill](https://github.com/kflohr/telecom-agent-skill)
 
 ---
 
-## 📖 Overview
-
-The **Telecom Control Plane** is a modern operations platform that brings **DevOps principles** to telephony. Instead of clicking through provider consoles (like Twilio) or managing state in spreadsheets, you manage your telecom infrastructure using **Code (CLI)** and a **Real-Time Dashboard**.
+## 🏗️ Architecture
+This repo deploys the SaaS infrastructure:
+*   **apps/api**: Fastify Node.js Server (Voice Logic, Twilio Webhooks).
+*   **apps/web**: React Dashboard (Tailwind, Vite).
+*   **apps/cli**: The reference implementation of the CLI (synced to public repo).
 
 It introduces a **Safety Layer** between your operators and the carrier network, allowing for governance, approvals, and audit trails.
 
