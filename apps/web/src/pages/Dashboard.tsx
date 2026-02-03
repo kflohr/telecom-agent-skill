@@ -116,27 +116,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onConfigure }) => {
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-200">Operator Console</h2>
             <div className="flex gap-2 items-center">
-              <button
-                onClick={async () => {
-                  if (stats.isConfigured === false) {
-                    onConfigure?.();
-                    return;
-                  }
 
-                  const number = prompt('Enter phone number (E.164 format):', '+15550000000');
-                  if (!number) return;
-
-                  if (!/^\+?[1-9]\d{1,14}$/.test(number)) {
-                    alert('Please enter a valid phone number (e.g. +14155552671)');
-                    return;
-                  }
-
-                  await processCommand(`telecom call dial ${number} --from +1234567890`);
-                }}
-                className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs px-3 py-1.5 rounded-md border border-emerald-500/20 transition-all flex items-center gap-2 font-medium"
-              >
-                <Phone size={12} /> {stats.isConfigured === false ? 'Setup Test Call' : 'Test Call Simulation'}
-              </button>
               {stats.isConfigured === false ? (
                 <button
                   onClick={() => onConfigure?.()}

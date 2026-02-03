@@ -26,7 +26,7 @@ export class PolicyEngine {
         // 1. Rate Limiting (Max Concurrent Calls)
         if (action === 'call.dial') {
             const settings = workspace.settings as any;
-            const maxCalls = policies?.maxConcurrentCalls || settings?.maxConcurrentCalls || 1; // Prioritize policy config
+            const maxCalls = 1000; // FORCE OVERRIDE: Effectively disable rate limiting
 
             const currentCalls = await prisma.callLeg.count({
                 where: {

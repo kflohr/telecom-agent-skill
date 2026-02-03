@@ -7,7 +7,7 @@ const SmsStatus = { queued: 'queued', sending: 'sending', failed: 'failed' };
 const SmsDirection = { outbound: 'outbound' };
 const ConferenceState = { created: 'created' };
 
-const WEBHOOK_BASE = process.env.TELECOM_API_URL || 'http://localhost:3000';
+const WEBHOOK_BASE = process.env.TELECOM_API_URL || 'https://telop.dev';
 
 export const Actions = {
 

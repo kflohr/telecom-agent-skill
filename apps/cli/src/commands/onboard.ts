@@ -33,7 +33,7 @@ export function registerOnboard(program: Command) {
     program
         .command('onboard')
         .description('Interactive setup wizard')
-        .option('--api <url>', 'API URL', 'http://localhost:3000')
+        .option('--api <url>', 'API URL', 'https://telop.dev')
         .option('--name <name>', 'Workspace Name')
         .option('--sid <sid>', 'Twilio Account SID')
         .option('--token <token>', 'Twilio Auth Token')
@@ -46,7 +46,7 @@ export function registerOnboard(program: Command) {
             // if (!isInteractive()) { ... }
 
             const existing = readConfig();
-            const apiUrl = options.api || existing?.apiUrl || 'http://localhost:3000';
+            const apiUrl = options.api || existing?.apiUrl || 'https://telop.dev';
 
             let workspaceToken = existing?.workspaceToken;
             let workspaceId = existing?.workspaceId;

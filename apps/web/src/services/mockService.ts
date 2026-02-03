@@ -15,11 +15,12 @@ import {
 // CONFIG
 const env = (import.meta as any).env || {};
 const API_URL = env.VITE_API_URL;
+const USE_REAL_API = !!API_URL; // Explicitly define it
 const API_TOKEN = env.VITE_API_TOKEN || 'demo-token';
 const request = async (path: string, options?: RequestInit) => {
     const headers = {
         'Content-Type': 'application/json',
-        'x-workspace-token': token || '',
+        'x-workspace-token': API_TOKEN || '',
         'x-actor-source': 'web',
         ...options?.headers
     };

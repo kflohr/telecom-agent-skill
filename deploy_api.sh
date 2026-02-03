@@ -29,7 +29,7 @@ cd ../..
 echo "☁️  Uploading to EC2..."
 # TODO: Replace with your key path and server IP
 KEY="${SSH_KEY_PATH:-./my-key.pem}"
-HOST="${SSH_HOST:-ubuntu@your-server-ip}"
+HOST="${SSH_HOST:-ubuntu@16.171.31.185}"
 API_DIR="/home/ubuntu/api"
 
 # Create directory
@@ -76,7 +76,7 @@ ssh -i "$KEY" "$HOST" << 'EOF'
   if [ $? -eq 0 ]; then
       pm2 reload telecom-api
   else
-      TELECOM_API_URL="http://localhost:3000" pm2 start dist/server.js --name telecom-api
+      TELECOM_API_URL="https://telop.dev" pm2 start dist/server.js --name telecom-api
   fi
 
   pm2 save

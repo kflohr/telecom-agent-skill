@@ -48,7 +48,16 @@ export const reconcileWebhook = async (provider: 'twilio', eventType: 'voice' | 
     return;
   }
 
-  console.log(`[Reconciler] Processing ${eventKey}`);
+  // Fetch Default Workspace (MVP)
+  const workspace = await prisma.workspace.findFirst();
+  const workspaceId = workspace?.id;
+
+  if (!workspaceId) {
+    console.error(`[Reconciler] No workspace found! Cannot process event.`);
+    return;
+  }
+
+  console.log(`[Reconciler] Processing ${eventKey} for Workspace: ${workspaceId}`);
 
   // 2. State Transition & DB Update
   try {
@@ -67,7 +76,7 @@ export const reconcileWebhook = async (provider: 'twilio', eventType: 'voice' | 
             rawLastEvent: payload as any
           },
           create: {
-            workspaceId: 'default', // MVP: single workspace
+            workspaceId,
             callSid: sid,
             direction: payload.Direction || 'inbound',
             from: payload.From,
@@ -81,7 +90,7 @@ export const reconcileWebhook = async (provider: 'twilio', eventType: 'voice' | 
         // Audit Log
         await tx.auditLog.create({
           data: {
-            workspaceId: 'default',
+            workspaceId,
             actorSource: ActorSource.system,
             actorLabel: 'Twilio Webhook',
             action: `call.status.${status}`,
@@ -106,7 +115,7 @@ export const reconcileWebhook = async (provider: 'twilio', eventType: 'voice' | 
             rawLastEvent: payload as any
           },
           create: {
-            workspaceId: 'default',
+            workspaceId,
             messageSid: sid,
             direction: 'inbound', // If it didn't exist, it's inbound
             status: mappedStatus,
@@ -121,7 +130,7 @@ export const reconcileWebhook = async (provider: 'twilio', eventType: 'voice' | 
 
         await tx.auditLog.create({
           data: {
-            workspaceId: 'default',
+            workspaceId,
             actorSource: ActorSource.system,
             actorLabel: 'Twilio Webhook',
             action: `sms.status.${status}`,
@@ -141,7 +150,7 @@ export const reconcileWebhook = async (provider: 'twilio', eventType: 'voice' | 
             where: { conferenceSid: sid },
             update: { state: ConferenceState.in_progress as any } as any,
             create: {
-              workspaceId: 'default',
+              workspaceId,
               conferenceSid: sid,
               friendlyName: payload.FriendlyName,
               state: ConferenceState.in_progress as any
@@ -163,7 +172,7 @@ export const reconcileWebhook = async (provider: 'twilio', eventType: 'voice' | 
             where: { conferenceSid: sid },
             update: {},
             create: {
-              workspaceId: 'default',
+              workspaceId,
               conferenceSid: sid,
               friendlyName: payload.FriendlyName,
               state: ConferenceState.in_progress as any
@@ -186,7 +195,7 @@ export const reconcileWebhook = async (provider: 'twilio', eventType: 'voice' | 
       // 3. Record the Event (Idempotency Lock)
       await tx.webhookEvent.create({
         data: {
-          workspaceId: 'default',
+          workspaceId,
           provider,
           eventKey,
           eventType,
