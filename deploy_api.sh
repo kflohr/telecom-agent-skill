@@ -27,8 +27,9 @@ cd ../..
 
 # 2. Upload to EC2
 echo "☁️  Uploading to EC2..."
-KEY="/Users/khristianflohr/Downloads/my_clawdbot_vm_Key.pem"
-HOST="ubuntu@13.61.21.177"
+# TODO: Replace with your key path and server IP
+KEY="${SSH_KEY_PATH:-./my-key.pem}"
+HOST="${SSH_HOST:-ubuntu@your-server-ip}"
 API_DIR="/home/ubuntu/api"
 
 # Create directory

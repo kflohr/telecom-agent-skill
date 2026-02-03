@@ -44,10 +44,20 @@ Stop unexpected bills before they happen.
 
 3.  **Take Control**
     Start managing your telecom operations!
-    \`\`\`bash
+    ```bash
     # Set a safety limit
     telecom policy set --concurrency 10
     
     # Make a smart call
     telecom call dial +14155550100 --record --transcribe
-    \`\`\`
+    ```
+
+4.  **🤖 Autonomous Agents**
+    Enable your AI bots to act in the real world.
+    ```bash
+    # Cloud Agent introduces itself and records the call
+    telecom agent call +15550199 --intro "Hello, I am scheduling an appointment."
+
+    # Retrieve the conversation transcript ("memory")
+    telecom agent memory <CallSid>
+    ```

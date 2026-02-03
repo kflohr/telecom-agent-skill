@@ -11,7 +11,7 @@ const WEBHOOK_BASE = process.env.TELECOM_API_URL || 'http://localhost:3000';
 
 export const Actions = {
 
-  async dial(workspace: Workspace, to: string, from = TWILIO_NUMBER, actor: ActorSource = ActorSource.api, record = false, transcribe = false) {
+  async dial(workspace: Workspace, to: string, from = TWILIO_NUMBER, actor: ActorSource = ActorSource.api, record = false, transcribe = false, introMessage?: string) {
     const activeClient = getTwilioClient(workspace);
     const workspaceId = workspace.id;
 
@@ -39,6 +39,7 @@ export const Actions = {
       const params = new URLSearchParams();
       if (record) params.append('record', 'true');
       if (transcribe) params.append('transcribe', 'true');
+      if (introMessage) params.append('intro', introMessage);
 
       const queryString = params.toString() ? `?${params.toString()}` : '';
       const webhookUrl = `${WEBHOOK_BASE}/webhooks/twilio/twiml/outbound${queryString}`;

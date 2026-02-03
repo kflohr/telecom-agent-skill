@@ -19,7 +19,8 @@ export const CallDialSchema = z.object({
     label: z.string().optional(),
     requireApproval: z.boolean().optional().default(false),
     record: z.boolean().optional(),
-    transcribe: z.boolean().optional()
+    transcribe: z.boolean().optional(),
+    introMessage: z.string().optional() // TTS Introduction
 });
 
 export const ConferenceMergeSchema = z.object({

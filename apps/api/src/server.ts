@@ -261,13 +261,14 @@ server.post('/webhooks/twilio/twiml/outbound', { preHandler: validateTwilioWebho
   const query = req.query as any;
   const shouldRecord = query.record === 'true';
   const shouldTranscribe = query.transcribe === 'true';
+  const introMessage = query.intro;
 
   reply.type('text/xml');
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   ${shouldRecord ? '<Start><Recording channels="dual" /></Start>' : ''}
   ${shouldTranscribe ? `<Start><Transcription statusCallbackUrl="${API_URL}/webhooks/twilio/transcription" /></Start>` : ''}
-  <Say>Connecting your call.</Say>
+  <Say>${introMessage || 'Connecting your call.'}</Say>
 </Response>`;
 });
 
@@ -366,7 +367,7 @@ server.register(async (api) => {
       });
     }
 
-    const result = await Actions.dial(request.workspace, body.to, body.from, request.actorSource, body.record, body.transcribe);
+    const result = await Actions.dial(request.workspace, body.to, body.from, request.actorSource, body.record, body.transcribe, body.introMessage);
 
     await prisma.auditLog.create({
       data: {
