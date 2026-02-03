@@ -286,8 +286,7 @@ server.post('/webhooks/twilio/transcription', { preHandler: validateTwilioWebhoo
           transcriptionSid: payload.TranscriptionSid || 'unknown',
           text: payload.TranscriptionData,
           event: payload.TranscriptionStatus,
-          confidence: payload.Confidence ? parseFloat(payload.Confidence) : undefined,
-          recordingUrl: payload.RecordingUrl
+          confidence: payload.Confidence ? parseFloat(payload.Confidence) : undefined
         }
       });
     } catch (e) {
@@ -474,7 +473,6 @@ server.register(async (api) => {
     return {
       text: transcript.text,
       confidence: transcript.confidence,
-      recordingUrl: transcript.recordingUrl,
       status: 'completed'
     };
   });

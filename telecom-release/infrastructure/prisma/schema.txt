@@ -91,7 +91,6 @@ model CallLeg {
 
   workspace   Workspace? @relation(fields: [workspaceId], references: [id])
   participants Participant[]
-  transcripts  CallTranscript[]
 }
 
 model Conference {
@@ -204,17 +203,4 @@ model WebhookEvent {
   payloadHash String
   payload     Json
   createdAt   DateTime @default(now())
-}
-
-model CallTranscript {
-  id              String   @id @default(cuid())
-  callSid         String
-  transcriptionSid String 
-  text            String   
-  confidence      Float?
-  event           String? // e.g., "completed", "partial"
-  recordingUrl    String? // Link to the audio file
-  createdAt       DateTime @default(now())
-
-  call            CallLeg  @relation(fields: [callSid], references: [callSid])
 }
