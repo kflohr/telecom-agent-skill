@@ -16,7 +16,26 @@ import {
 const env = (import.meta as any).env || {};
 const API_URL = env.VITE_API_URL;
 const API_TOKEN = env.VITE_API_TOKEN || 'demo-token';
-const USE_REAL_API = !!API_URL;
+const request = async (path: string, options?: RequestInit) => {
+    const headers = {
+        'Content-Type': 'application/json',
+        'x-workspace-token': token || '',
+        'x-actor-source': 'web',
+        ...options?.headers
+    };
+    const res = await fetch(`${API_URL}${path}`, { ...options, headers });
+    if (!res.ok) throw new Error('API Error');
+    return res.json();
+};
+
+export const getCallTranscript = async (sid: string) => {
+    if (!USE_REAL_API) {
+        // Mock data if no API
+        await new Promise(r => setTimeout(r, 600));
+        return { text: `[MOCK TRANSCRIPT FOR ${sid}] \n\nAgent: Hello, this is a test call.\nUser: Oh, hi there. Who is this?`, confidence: 0.95 };
+    }
+    return request(`/v1/calls/${sid}/transcript`);
+};
 
 // --- MOCK STATE (Fallback) ---
 // --- MOCK STATE (Fallback) ---

@@ -2,10 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { getCalls, getConferences, executeHangup, executeHold } from '../services/mockService';
 import { CallLeg, Conference, CallState, ConferenceState } from '../types';
 import { Phone, PhoneOff, Mic, MicOff, GitMerge, Clock, Hash, Activity, PauseCircle, PlayCircle } from 'lucide-react';
+import { TranscriptViewer } from '../components/TranscriptViewer';
 
 export const CallsAndConf: React.FC = () => {
   const [calls, setCalls] = useState<CallLeg[]>([]);
   const [conferences, setConferences] = useState<Conference[]>([]);
+  const [expandedRow, setExpandedRow] = useState<string | null>(null);
+
+  const toggleRow = (sid: string) => {
+    setExpandedRow(expandedRow === sid ? null : sid);
+  };
 
   const refresh = async () => {
     const [c, conf] = await Promise.all([getCalls(), getConferences()]);
@@ -153,34 +159,48 @@ export const CallsAndConf: React.FC = () => {
             </thead>
             <tbody className="divide-y divide-gray-800">
               {calls.map(call => (
-                <tr key={call.id} className="hover:bg-gray-800/30 transition-colors">
-                  <td className="px-6 py-4">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${call.state === CallState.RINGING ? 'bg-yellow-500/10 text-yellow-400 animate-pulse' :
+                <React.Fragment key={call.id}>
+                  <tr
+                    onClick={() => toggleRow(call.callSid)}
+                    className="hover:bg-gray-800/30 transition-colors cursor-pointer group"
+                  >
+                    <td className="px-6 py-4">
+                      {/* ... existing badge ... */}
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${call.state === CallState.RINGING ? 'bg-yellow-500/10 text-yellow-400 animate-pulse' :
                         call.state === CallState.IN_PROGRESS ? 'bg-emerald-500/10 text-emerald-400' : 'bg-gray-700 text-gray-300'
-                      }`}>
-                      {call.state === CallState.RINGING && <span className="w-1.5 h-1.5 rounded-full bg-yellow-400" />}
-                      {call.state === CallState.IN_PROGRESS && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
-                      {call.state}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="font-mono text-gray-300">{call.callSid}</div>
-                    <div className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-                      {call.direction === 'inbound' ? 'INBOUND' : 'OUTBOUND (API)'}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 font-mono text-gray-400">{call.from}</td>
-                  <td className="px-6 py-4 font-mono text-gray-200">{call.to}</td>
-                  <td className="px-6 py-4 text-right">
-                    <button
-                      onClick={() => handleHangup(call.callSid)}
-                      className="text-gray-500 hover:text-red-400 transition-colors bg-gray-800 hover:bg-gray-700 border border-gray-700 px-3 py-1.5 rounded flex items-center gap-2 ml-auto"
-                    >
-                      <PhoneOff size={14} />
-                      <span className="text-xs font-medium">Hangup</span>
-                    </button>
-                  </td>
-                </tr>
+                        }`}>
+                        {call.state === CallState.RINGING && <span className="w-1.5 h-1.5 rounded-full bg-yellow-400" />}
+                        {call.state === CallState.IN_PROGRESS && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
+                        {call.state}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="font-mono text-gray-300 group-hover:text-blue-400 transition-colors">{call.callSid}</div>
+                      <div className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                        {call.direction === 'inbound' ? 'INBOUND' : 'OUTBOUND (API)'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 font-mono text-gray-400">{call.from}</td>
+                    <td className="px-6 py-4 font-mono text-gray-200">{call.to}</td>
+                    <td className="px-6 py-4 text-right">
+                      {/* ... existing button ... */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleHangup(call.callSid); }}
+                        className="text-gray-500 hover:text-red-400 transition-colors bg-gray-800 hover:bg-gray-700 border border-gray-700 px-3 py-1.5 rounded flex items-center gap-2 ml-auto"
+                      >
+                        <PhoneOff size={14} />
+                        <span className="text-xs font-medium">Hangup</span>
+                      </button>
+                    </td>
+                  </tr>
+                  {expandedRow === call.callSid && (
+                    <tr className="bg-gray-900/40">
+                      <td colSpan={5} className="px-6 py-4 border-b border-gray-800/50">
+                        <TranscriptViewer callSid={call.callSid} />
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
               {calls.length === 0 && (
                 <tr>
