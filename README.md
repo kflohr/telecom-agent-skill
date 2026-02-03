@@ -5,7 +5,7 @@ This is the official skill package for connecting Autonomous Agents to the [Telo
 
 ## 📦 Install
 ```bash
-/install https://github.com/YOUR_USERNAME/telecom-agent-skill
+/install https://github.com/kflohr/telecom-agent-skill 
 ```
 
 ## 🚀 Quick Start
