@@ -455,6 +455,26 @@ server.register(async (api) => {
     });
   });
 
+  api.get('/v1/calls/:sid/transcript', async (req, reply) => {
+    const request = req as AuthenticatedRequest;
+    const { sid } = req.params as { sid: string };
+
+    const transcript = await prisma.callTranscript.findFirst({
+      where: { callSid: sid },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    if (!transcript) {
+      return { text: null, status: 'pending' };
+    }
+
+    return {
+      text: transcript.text,
+      confidence: transcript.confidence,
+      status: 'completed'
+    };
+  });
+
   api.get('/v1/conferences', async (req, reply) => {
     const request = req as AuthenticatedRequest;
     return prisma.conference.findMany({
