@@ -1,7 +1,7 @@
 ---
 name: "Telecom Agent Skill"
 description: "Turn your AI Agent into a phone operator. Make calls, send SMS, and remember conversations."
-version: "1.0.0"
+version: "1.1.1"
 ---
 
 # 📡 Telecom Agent Skill
