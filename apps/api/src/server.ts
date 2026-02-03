@@ -245,8 +245,9 @@ server.post('/webhooks/twilio/voice/incoming', { preHandler: validateTwilioWebho
   reply.type('text/xml');
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Say>Welcome to the control plane. Please hold for an operator.</Say>
-  <Enqueue waitUrl="http://twimlets.com/holdmusic?Bucket=com.twilio.music.ambient">operator_queue</Enqueue>
+  <Say>Welcome to the control plane. Please leave a message after the beep to test the memory system.</Say>
+  <Record transcribe="true" transcribeCallback="${API_URL}/webhooks/twilio/transcription" maxLength="30" />
+  <Say>Thank you. Your message has been recorded.</Say>
 </Response>`;
 });
 
@@ -268,7 +269,7 @@ server.post('/webhooks/twilio/twiml/outbound', { preHandler: validateTwilioWebho
 <Response>
   ${shouldRecord ? '<Start><Recording channels="dual" /></Start>' : ''}
   ${shouldTranscribe ? `<Start><Transcription statusCallbackUrl="${API_URL}/webhooks/twilio/transcription" /></Start>` : ''}
-  <Say>${introMessage || 'Connecting your call. Speak now to test recording.'}</Say>
+  <Say>${introMessage || 'Hi there! I am your AI assistant in testing mode. Please speak after the beep to help us verify the recording logic. Thanks!'}</Say>
   <Pause length="60" />
 </Response>`;
 });
