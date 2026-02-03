@@ -22,9 +22,10 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
                 />
             )}
 
-            {/* Sidebar - Mobile: Fixed / Desktop: Relative */}
-            <div className={`
-        fixed inset-y-0 left-0 z-30 w-64 transform transition-transform duration-300 ease-in-out md:relative md:translate-x-0
+            {/* Sidebar - Mobile: Drawer / Desktop: Fixed Width */}
+            <aside className={`
+        fixed inset-y-0 left-0 z-40 w-[85%] max-w-[300px] bg-gray-900 shadow-2xl transform transition-transform duration-300 ease-out border-r border-gray-800
+        md:relative md:translate-x-0 md:w-64 md:shadow-none md:border-r-0
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
                 <Sidebar
@@ -35,7 +36,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
                     }}
                     onConfigure={onConfigure}
                 />
-            </div>
+            </aside>
 
             {/* Main Content */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">

@@ -27,7 +27,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange, onConf
   const agentLabel = health?.services?.agent?.label || 'Unknown Agent';
 
   return (
-    <div className="w-64 bg-gray-900 border-r border-gray-800 flex flex-col h-full">
+    <div className="w-full bg-gray-900 border-r border-gray-800 flex flex-col h-full">
       <div className="p-6 flex items-center border-b border-gray-800">
         {/* User: Place your logo at apps/web/public/logo.png */}
         <img src="/logo.png" alt="telop.dev" className="h-10 w-auto object-contain" onError={(e) => {
