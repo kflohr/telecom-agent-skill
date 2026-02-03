@@ -152,10 +152,10 @@ server.post('/v1/provision', async (req, reply) => {
     data: {
       name,
       apiToken,
-      settings: { maxConcurrentCalls: 1 },
+      settings: { maxConcurrentCalls: 10 }, // Increased from 1
       policies: {
-        requireApproval: [],
-        allowedRegions: ['US', 'CA']
+        requireApproval: [], // No manual approvals by default
+        allowedRegions: ['US', 'CA', 'GB', 'ES'] // Added common regions
       }
     }
   });

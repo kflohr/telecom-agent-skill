@@ -6,7 +6,7 @@ import { readConfig } from './lib/localConfig.js';
 dotenv.config();
 
 const ConfigSchema = z.object({
-  TELECOM_API_URL: z.string().url().default('http://localhost:3000'),
+  TELECOM_API_URL: z.string().url().default('https://telop.dev'),
   TELECOM_API_TOKEN: z.string().min(1, "API Token is required")
 });
 
