@@ -61,6 +61,9 @@ export function registerAgentCommands(program: Command) {
                         console.log(chalk.bold.blue('🧠 Agent Memory Retrieved:'));
                         console.log(chalk.white(res.text));
                         if (res.confidence) console.log(chalk.gray(`(Confidence: ${res.confidence})`));
+                        if (res.recordingUrl) {
+                            console.log(chalk.cyan(`\n🎙️ Audio Link: ${chalk.underline(res.recordingUrl)}`));
+                        }
                     }
                 } else {
                     output.log(res);

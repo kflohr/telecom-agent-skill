@@ -10,8 +10,8 @@ const API_URL = process.env.TELECOM_API_URL || 'http://localhost:3000';
 const API_TOKEN = process.env.TELECOM_API_TOKEN;
 
 if (!BOT_TOKEN) {
-  console.error("❌ Missing TELEGRAM_BOT_TOKEN");
-  (process as any).exit(1);
+    console.error("❌ Missing TELEGRAM_BOT_TOKEN");
+    (process as any).exit(1);
 }
 
 const bot = new Telegraf(BOT_TOKEN);
@@ -54,12 +54,12 @@ bot.hears('📊 Status', async (ctx) => {
         ctx.sendChatAction('typing');
         const health = await apiRequest('/v1/health');
         const stats = await apiRequest('/v1/status/recent');
-        
+
         let msg = `✅ *System Online*\n`;
         msg += `DB: ${health.db}\n`;
         msg += `Calls: ${stats.stats.activeCalls}\n`;
         msg += `Approvals Pending: ${stats.stats.pendingApprovals}`;
-        
+
         ctx.replyWithMarkdown(msg);
     } catch (e: any) {
         ctx.reply(`⚠️ Error: ${e.message}`);
@@ -70,17 +70,17 @@ bot.hears('🚨 Approvals', async (ctx) => {
     try {
         ctx.sendChatAction('typing');
         const approvals = await apiRequest('/v1/approvals/pending');
-        
+
         if (approvals.length === 0) {
             return ctx.reply("✅ No pending approvals.");
         }
-        
+
         for (const app of approvals) {
-            const msg = `🛡 *Approval Requested*\n\n` + 
-                        `Action: \`${app.action}\`\n` + 
-                        `By: ${app.actorLabel}\n` +
-                        `ID: \`${app.id}\``;
-            
+            const msg = `🛡 *Approval Requested*\n\n` +
+                `Action: \`${app.action}\`\n` +
+                `By: ${app.actorLabel}\n` +
+                `ID: \`${app.id}\``;
+
             await ctx.replyWithMarkdown(msg, Markup.inlineKeyboard([
                 Markup.button.callback('✅ Approve', `approve:${app.id}`),
                 Markup.button.callback('❌ Deny', `deny:${app.id}`)
@@ -110,6 +110,37 @@ bot.action(/deny:(.+)/, async (ctx) => {
         await ctx.editMessageText(`❌ Request ${id} DENIED.`);
     } catch (e: any) {
         await ctx.answerCbQuery(`Error: ${e.message}`);
+    }
+});
+
+// MEMORY / TRANSCRIPT HANDLER
+bot.hears(/memory (.+)/i, async (ctx) => {
+    const sid = ctx.match[1].trim();
+    try {
+        ctx.sendChatAction('typing');
+        const memory = await apiRequest(`/v1/calls/${sid}/transcript`);
+
+        if (memory.status === 'pending') {
+            return ctx.reply("⏳ Memory is still forming (pending)...");
+        }
+
+        if (!memory.text) {
+            return ctx.reply("❌ No memory found for this call.");
+        }
+
+        let msg = `🧠 *Agent Memory*\n\n${memory.text}`;
+        if (memory.confidence) msg += `\n\n_(Confidence: ${memory.confidence})_`;
+
+        await ctx.replyWithMarkdown(msg);
+
+        // Send Audio if available
+        if (memory.recordingUrl) {
+            ctx.sendChatAction('upload_voice');
+            await ctx.replyWithAudio({ url: memory.recordingUrl }, { title: `Call Recording ${sid}` });
+        }
+
+    } catch (e: any) {
+        ctx.reply(`⚠️ Error: ${e.message}`);
     }
 });
 
