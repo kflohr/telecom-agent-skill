@@ -1,53 +1,52 @@
 ---
-name: Telecom Control Plane
-description: A production-grade Control Plane for Twilio. Manage voice, SMS, and recording workflows with policy enforcement and compliance built-in.
+name: Telecom Agent Skill
+description: Give your Agent the power of Voice & SMS. Connects to Telop.dev cloud.
 version: 1.1.0
 ---
 
-# 📡 Telecom Control Plane
+# 📡 Telecom Agent Skill
 
-**Turn your Twilio account into a managed, compliant, and intelligent communication platform.**
+**Turn your AI Agent into a phone operator.**
 
-This skill deploys a full-stack **Operator Console** that sits between your code and the telephony provider, giving you superpowers like Global Policy Enforcement, Auto-Transcription, and a Unified Audit Log.
+This skill allows your MoltBot or OpenClaw agent to make real phone calls, send SMS, and "remember" conversations via the [Telop.dev](https://telop.dev) cloud.
 
-## ✨ Features
+## ✨ Capabilities
 
-### 🛡️ Policy Engine
-Stop unexpected bills before they happen.
-*   **Concurrency Limits:** Hard-cap simultaneous calls (e.g., max 5 active lines).
-*   **Approval Workflows:** Require manual human approval for sensitive actions (e.g., calling international numbers).
-*   **Auto-Review:** Define rules to auto-approve safe traffic.
+### 🗣️ Voice & Speech
+*   **Make Calls**: Agent can dial any number.
+*   **Speak**: "Text-to-Speech" intro messages.
+*   **Listen**: Records the call audio automatically.
 
-### 🧠 Voice Intelligence
-*   **Automatic Recording:** Flip a switch to record all calls for compliance.
-*   **Transcription:** Auto-transcribe voice to text and save it to your database.
-*   **Persistent Memory:** Every call, message, and decision is logged forever.
+### 🧠 Agent Memory
+*   **Transcription**: The agent can read the text transcript of the call to understand what happened.
+*   **Persistence**: All logs are saved to your secure dashboard.
 
-### 🚀 Developer Experience
-*   **CLI First:** `telecom` command for instant control.
-*   **Secure:** Token-based authentication and secure deployment.
-*   **Self-Healing:** Auto-restarting API services.
+### 🛡️ Safety Layer
+*   **Human-in-the-Loop**: High-risk calls (like international dialing) can be configured to require *Human Approval* via the dashboard before the agent proceeds.
 
-## 🛠️ Quick Start
+## 🚀 Quick Start
 
-1.  **Deploy Infrastructure**
-    Run the included script to provision your API and Database on any Ubuntu server (or AWS EC2).
-    \`\`\`bash
-    ./deploy_api.sh
-    \`\`\`
+### 1. Installation
+Install this skill into your agent.
+```bash
+/install https://github.com/kflohr/telecom-agent-skill
+```
 
-2.  **Connect Provider**
-    Link your Twilio account securely.
-    \`\`\`bash
-    telecom onboard
-    \`\`\`
+### 2. Configuration (One-time)
+Your agent needs to link to your Twilio account.
+```bash
+telecom onboard
+# Follow the prompts to enter Account SID & Auth Token
+```
 
-3.  **Take Control**
-    Start managing your telecom operations!
-    \`\`\`bash
-    # Set a safety limit
-    telecom policy set --concurrency 10
-    
-    # Make a smart call
-    telecom call dial +14155550100 --record --transcribe
-    \`\`\`
+### 3. Usage Examples
+
+**Make a Call:**
+```bash
+telecom agent call +14155550100 --intro "Hello, I am calling from the dental office to confirm your appointment."
+```
+
+**Check Memory (Transcript):**
+```bash
+telecom agent memory CA12345...
+```
