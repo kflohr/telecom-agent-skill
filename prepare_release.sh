@@ -22,6 +22,7 @@ chmod +x telecom-release/install.sh
 cp deploy_api.sh telecom-release/infrastructure/
 cp deploy_web.sh telecom-release/infrastructure/
 cp package.json telecom-release/infrastructure/
+cp tsconfig.json telecom-release/infrastructure/
 
 # Rename Nginx to generic name and .txt extension for validation
 cp telop.dev.nginx telecom-release/infrastructure/telecom_nginx.txt
