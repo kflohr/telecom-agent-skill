@@ -11,11 +11,13 @@ import { CallDialSchema, SmsSendSchema, ConferenceMergeSchema } from './lib/sche
 import { registerOnboard } from './commands/onboard.js';
 import { registerPolicyCommands } from './commands/policy.js';
 import { registerAgentCommands } from './commands/agent.js';
+import { registerUpdateCommand } from './commands/update.js';
 
 const program = new Command();
 registerOnboard(program);
 registerPolicyCommands(program);
 registerAgentCommands(program);
+registerUpdateCommand(program);
 let output: Output;
 
 program

@@ -117,12 +117,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onConfigure }) => {
             <h2 className="text-lg font-semibold text-gray-200">Operator Console</h2>
             <div className="flex gap-2 items-center">
 
-              {stats.isConfigured === false ? (
+              {!stats.isConfigured ? (
                 <button
                   onClick={() => onConfigure?.()}
-                  className="bg-red-600 hover:bg-red-500 text-white text-xs px-3 py-1 rounded shadow-lg shadow-red-900/20 animate-pulse font-medium border border-red-500 flex items-center gap-1.5 transition-colors"
+                  className="bg-red-600 hover:bg-red-500 text-white text-sm px-4 py-1.5 rounded-md shadow-[0_0_15px_rgba(220,38,38,0.7)] animate-pulse font-bold border border-red-400 flex items-center gap-2 transition-all ring-4 ring-red-500/20 hover:scale-105"
                 >
-                  <ShieldAlert size={12} /> Setup Connection
+                  <ShieldAlert size={16} className="animate-bounce" /> SETUP REQUIRED
                 </button>
               ) : (
                 <button
