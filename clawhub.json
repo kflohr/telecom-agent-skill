@@ -2,13 +2,20 @@
   "manifest_version": "1.0",
   "name": "Telecom Control Plane",
   "id": "telecom-control-plane",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Enterprise-grade telecom operations platform. Call control, SMS management, and real-time visualization with AI agent integration.",
   "author": "kflohr",
   "license": "step-enterprise",
-  "repository": "https://github.com/kflohr/telecom-control-plane",
+  "repository": "https://github.com/kflohr/telecom-agent-skill",
   "entry_point": "skills/openclaw-telecom/SKILL.md",
-  "tags": ["telecom", "twilio", "voice", "sms", "real-time", "dashboard"],
+  "tags": [
+    "telecom",
+    "twilio",
+    "voice",
+    "sms",
+    "real-time",
+    "dashboard"
+  ],
   "capabilities": [
     "voice_control",
     "sms_messaging",
@@ -16,7 +23,13 @@
     "approval_workflows"
   ],
   "environment": {
-    "required": ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER"],
-    "optional": ["Deepseek_API_KEY"]
+    "required": [
+      "TWILIO_ACCOUNT_SID",
+      "TWILIO_AUTH_TOKEN",
+      "TWILIO_PHONE_NUMBER"
+    ],
+    "optional": [
+      "Deepseek_API_KEY"
+    ]
   }
 }

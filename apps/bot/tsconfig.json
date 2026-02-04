@@ -1,10 +1,15 @@
 {
     "extends": "../../tsconfig.json",
     "compilerOptions": {
-        "outDir": "dist"
+        "outDir": "dist",
+        "noEmit": false,
+        "module": "ESNext",
+        "moduleResolution": "node",
+        "esModuleInterop": true,
+        "allowImportingTsExtensions": false,
+        "skipLibCheck": true
     },
     "include": [
-        "src",
-        "../../packages/shared"
+        "src"
     ]
 }

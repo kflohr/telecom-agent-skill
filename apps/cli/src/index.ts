@@ -12,12 +12,14 @@ import { registerOnboard } from './commands/onboard.js';
 import { registerPolicyCommands } from './commands/policy.js';
 import { registerAgentCommands } from './commands/agent.js';
 import { registerUpdateCommand } from './commands/update.js';
+import { registerCampaignCommands } from './commands/campaign.js';
 
 const program = new Command();
 registerOnboard(program);
 registerPolicyCommands(program);
 registerAgentCommands(program);
 registerUpdateCommand(program);
+registerCampaignCommands(program);
 let output: Output;
 
 program
@@ -128,15 +130,15 @@ call.command('test')
     } catch (err) { handleError(err); }
   });
 
-call.command('troll')
-  .description('Initiate a Prank Call (Audio Injection)')
+call.command('fun')
+  .description('Initiate a Fun/Prank Call (Audio Injection)')
   .argument('<number>', 'Target phone number')
   .option('--type <type>', 'Audio type (rickroll, saxoroll, nyan)', 'rickroll')
   .option('--identity <name>', 'Identity for the AI to assume')
   .action(async (number, opts) => {
     try {
       if (program.opts().human) {
-        console.log(chalk.blue(`🎭 Initiating Troll Call (${opts.type})...`));
+        console.log(chalk.blue(`🎭 Initiating Fun Mode (${opts.type})...`));
         if (opts.identity) console.log(chalk.blue(`🤖 Identity: ${opts.identity}`));
       }
 
@@ -147,9 +149,9 @@ call.command('troll')
       });
 
       if (program.opts().human) {
-        console.log(chalk.green('✔ Prank Dispatched'));
+        console.log(chalk.green('✔ Fun Call Dispatched'));
         console.log(`SID: ${chalk.bold(res.callSid)}`);
-        console.log(chalk.gray('The target is being trolled.'));
+        console.log(chalk.gray('The target is being entertained.'));
       } else {
         output.log(res);
       }
@@ -274,5 +276,25 @@ program.command('merge')
       else handleError(err);
     }
   });
+
+program.command('fun')
+  .argument('<number>')
+  .option('--type <type>', 'Audio type', 'rickroll')
+  .option('--identity <name>', 'Identity')
+  .action(async (number, opts) => {
+    // Alias to the main logic
+    const cmd = program.commands.find(c => c.name() === 'call')?.commands.find(c => c.name() === 'fun');
+    if (cmd) {
+      // Create a mock command object with options
+      await cmd.parseAsync(['node', 'fun', number, ...(opts.type ? ['--type', opts.type] : []), ...(opts.identity ? ['--identity', opts.identity] : [])], { from: 'user' });
+    } else {
+      console.error('Fun command not found');
+    }
+  });
+
+// Simpler Alias: duplicate logic to avoid commander parse weirdness
+program.command('troll') // Legecy alias
+  .argument('<number>')
+  .action((n) => { console.log('This command has been renamed to "telecom fun"'); });
 
 program.parse();

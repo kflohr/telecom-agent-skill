@@ -83,8 +83,44 @@ ssh -i "$KEY" "$HOST" << 'EOF'
   
   # Wait a moment for startup
   sleep 2
-  echo "📜 Startup Logs:"
   pm2 logs telecom-api --lines 50 --nostream
+EOF
+
+# 4. Deploy Telegram Bot
+echo "🤖 Building Bot..."
+cd apps/bot
+npm install
+npm run build
+cd ../..
+
+echo "🤖 Uploading Bot..."
+BOT_DIR="/home/ubuntu/bot"
+ssh -i "$KEY" "$HOST" "mkdir -p $BOT_DIR"
+scp -i "$KEY" -r apps/bot/dist apps/bot/package.json "$HOST:$BOT_DIR/"
+
+echo "🤖 Starting Bot..."
+ssh -i "$KEY" "$HOST" << 'EOF'
+  cd bot
+  npm install --production
+  
+  if [ -f ../api/.env ]; then
+      echo "🔧 Linking .env from API..."
+      ln -sf ../api/.env .env
+  fi
+
+  if ! command -v pm2 &> /dev/null; then
+      sudo npm install -g pm2
+  fi
+
+  pm2 describe telecom-bot > /dev/null 2>&1
+  if [ $? -eq 0 ]; then
+      pm2 reload telecom-bot
+  else
+      pm2 start dist/index.js --name telecom-bot
+  fi
+  pm2 save
+  echo "📜 Bot Logs:"
+  pm2 logs telecom-bot --lines 20 --nostream
 EOF
 
 # 4. Update Nginx

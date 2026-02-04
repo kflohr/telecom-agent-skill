@@ -69,6 +69,7 @@ model Workspace {
   calls     CallLeg[]
   messages  SmsMessage[]
   auditLogs AuditLog[]
+  campaigns Campaign[]
 }
 
 model CallLeg {
@@ -92,6 +93,38 @@ model CallLeg {
   workspace   Workspace? @relation(fields: [workspaceId], references: [id])
   participants Participant[]
   transcripts  CallTranscript[]
+}
+
+model Campaign {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  status      String   @default("active") // active, paused, completed
+  cronExpression String? // Optional: Schedule future runs
+  
+  items       CampaignItem[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  workspace   Workspace @relation(fields: [workspaceId], references: [id])
+}
+
+model CampaignItem {
+  id          String   @id @default(cuid())
+  campaignId  String
+  to          String
+  status      String   @default("pending") // pending, queued, initiated, failed, completed
+  
+  callSid     String?  // Linked once call starts
+  attempts    Int      @default(0)
+  nextAttempt DateTime? @default(now())
+  error       String?
+
+  campaign    Campaign @relation(fields: [campaignId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([campaignId, status])
 }
 
 model Conference {

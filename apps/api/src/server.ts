@@ -7,11 +7,12 @@ import { verifyAudioPath } from './test';
 import { Actions } from './actions';
 import { SmsSendSchema, CallDialSchema, ConferenceMergeSchema, ApprovalDecisionSchema, PolicyUpdateSchema } from './schemas';
 import { PolicyEngine } from './policy';
+import { campaignRoutes } from './routes/campaigns';
 import { prisma } from './db';
 import { ActorSource, ApprovalStatus, Workspace } from '@prisma/client';
 import dotenv from 'dotenv';
 import path from 'path';
-import crypto from 'crypto';
+import nodeCrypto from 'crypto';
 
 // Load .env
 dotenv.config();
@@ -21,11 +22,24 @@ const server = Fastify({ logger: true });
 server.register(formbody);
 server.register(cors);
 
+// Register Routes
+server.register(campaignRoutes);
+
 const API_URL = process.env.TELECOM_API_URL || 'https://telop.dev';
+
+// Start Worker
+import { campaignWorker } from './workers/campaignWorker';
+campaignWorker.start();
+
+// Graceful Shutdown
+process.on('SIGTERM', () => {
+  campaignWorker.stop();
+  process.exit(0);
+});
 
 // --- AUTH MIDDLEWARE ---
 
-interface AuthenticatedRequest extends FastifyRequest {
+export interface AuthenticatedRequest extends FastifyRequest {
   workspaceId: string;
   workspace: Workspace;
   actorSource: ActorSource;
@@ -34,19 +48,12 @@ interface AuthenticatedRequest extends FastifyRequest {
 server.decorateRequest('workspaceId', '');
 server.decorateRequest('actorSource', ActorSource.api);
 
-const requireAuth = async (req: FastifyRequest, reply: FastifyReply) => {
-  const token = req.headers['x-workspace-token'];
-  if (!token || typeof token !== 'string') {
-    return reply.status(401).send({ error: 'Missing X-Workspace-Token header' });
-  }
+export const requireAuth = async (req: FastifyRequest, reply: FastifyReply) => {
+  const token = req.headers['x-workspace-token'] as string;
+  if (!token) return reply.code(401).send({ error: "Unauthorized" });
 
-  const workspace = await prisma.workspace.findUnique({
-    where: { apiToken: token }
-  });
-
-  if (!workspace) {
-    return reply.status(401).send({ error: 'Invalid API Token' });
-  }
+  const workspace = await prisma.workspace.findUnique({ where: { apiToken: token } });
+  if (!workspace) return reply.code(401).send({ error: "Invalid Token" });
 
   (req as AuthenticatedRequest).workspaceId = workspace.id;
   (req as AuthenticatedRequest).workspace = workspace;
@@ -57,6 +64,7 @@ const requireAuth = async (req: FastifyRequest, reply: FastifyReply) => {
   else if (sourceHeader === 'openclaw') (req as AuthenticatedRequest).actorSource = ActorSource.openclaw;
   else (req as AuthenticatedRequest).actorSource = ActorSource.api;
 };
+export const PRE_HANDLER_AUTH = requireAuth; // Alias if needed elsewhere
 
 // --- SECURITY MIDDLEWARE ---
 
@@ -147,7 +155,7 @@ server.post('/v1/provision', async (req, reply) => {
   const name = body.name || `Workspace-${Date.now()}`;
 
   // Generate a secure API key
-  const apiToken = `sk_${crypto.randomBytes(24).toString('hex')}`;
+  const apiToken = `sk_${nodeCrypto.randomBytes(24).toString('hex')}`;
 
   const workspace = await prisma.workspace.create({
     data: {

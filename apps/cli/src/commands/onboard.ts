@@ -194,7 +194,58 @@ export function registerOnboard(program: Command) {
                 }
             }
 
+            // STEP 4: FUN MODE TEASER
+            if (testCall) {
+                console.log(chalk.magenta('\nStep 4: Have some fun? 🎭'));
+                const { tryFun } = await inquirer.prompt([{
+                    type: 'confirm',
+                    name: 'tryFun',
+                    message: 'Want to try "Fun Mode"? I can call you as your AI Assistant.',
+                    default: true
+                }]);
+
+                if (tryFun) {
+                    const { identity, funType, dest } = await inquirer.prompt([
+                        {
+                            type: 'input',
+                            name: 'dest',
+                            message: 'Number to call:',
+                        },
+                        {
+                            type: 'list',
+                            name: 'funType',
+                            message: 'Select audio payload:',
+                            choices: ['rickroll', 'saxoroll', 'nyan'],
+                            default: 'rickroll'
+                        },
+                        {
+                            type: 'input',
+                            name: 'identity',
+                            message: 'Who should I say I am?',
+                            default: 'Your Loyal AI Assistant'
+                        }
+                    ]);
+
+                    const spinner4 = ora('Dispatching Fun Mode...').start();
+                    try {
+                        const res: any = await apiCall('POST', `${apiUrl}/v1/test/audio`, {
+                            to: dest,
+                            type: funType,
+                            identity: identity
+                        }, workspaceToken);
+
+                        spinner4.succeed('Call Dispatched! Enjoy the show. 🎵');
+                    } catch (e: any) {
+                        spinner4.fail(`Fun mode failed: ${e.message}`);
+                    }
+                }
+            }
+
             console.log(chalk.bold.green('\n✅ Setup Complete!'));
             console.log(`Run 'export TELECOM_API_TOKEN=${workspaceToken}' to use the CLI normally.`);
+
+            console.log(chalk.blue('\n🚀 Pro Tip: Bulk Calling'));
+            console.log(chalk.gray('Need to call a list of leads safely?'));
+            console.log(`Run: ${chalk.bold('telecom campaign create "My List" --file leads.csv')}`);
         });
 }
