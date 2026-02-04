@@ -402,8 +402,11 @@ export const processCommand = async (cmdStr: string): Promise<{ output: any; sta
             return {
                 output: `Available commands:
   telecom call dial <to> [--from <num>]
+  telecom call test <to> (Audio Check)
   telecom call merge <sidA> <sidB>
   telecom call list
+  telecom agent call <to>
+  telecom agent memory <sid>
   telecom sms send <to> <message>
   telecom approvals list
   telecom approve <id>

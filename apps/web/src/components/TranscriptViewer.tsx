@@ -11,6 +11,7 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({ callSid }) =
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
     const [confidence, setConfidence] = useState<number | null>(null);
+    const [recordingUrl, setRecordingUrl] = useState<string | null>(null);
 
     useEffect(() => {
         let mounted = true;
@@ -20,6 +21,8 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({ callSid }) =
                 if (mounted) {
                     setText(data.text);
                     setConfidence(data.confidence || null);
+                    // Check for recordingUrl in the response
+                    setRecordingUrl((data as any).recordingUrl || null);
                     setLoading(false);
                 }
             })
@@ -62,12 +65,23 @@ export const TranscriptViewer: React.FC<TranscriptViewerProps> = ({ callSid }) =
                     </span>
                 )}
             </div>
+            {/* Audio Player */}
+            {recordingUrl && (
+                <div className="mb-3 bg-gray-900/50 p-2 rounded border border-gray-800">
+                    <div className="text-[10px] text-gray-500 mb-1 flex items-center gap-1">
+                        🎙️ Audio Recording
+                    </div>
+                    <audio controls className="w-full h-8 cursor-pointer" src={recordingUrl}>
+                        Your browser does not support the audio element.
+                    </audio>
+                </div>
+            )}
             <p className="text-gray-300 text-sm font-mono leading-relaxed whitespace-pre-wrap">
                 {text}
             </p>
             <div className="mt-3 flex justify-end">
                 <button
-                    onClick={() => navigator.clipboard.writeText(text)}
+                    onClick={() => navigator.clipboard.writeText(text || '')}
                     className="text-xs flex items-center gap-1 text-gray-500 hover:text-white transition-colors"
                 >
                     <Copy size={12} /> Copy Text
