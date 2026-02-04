@@ -7,7 +7,7 @@
   "author": "kflohr",
   "license": "step-enterprise",
   "repository": "https://github.com/kflohr/telecom-agent-skill",
-  "entry_point": "skills/openclaw-telecom/SKILL.md",
+  "entry_point": "SKILL.md",
   "tags": [
     "telecom",
     "twilio",
