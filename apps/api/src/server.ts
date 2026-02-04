@@ -3,6 +3,7 @@ import formbody from '@fastify/formbody';
 import cors from '@fastify/cors';
 import twilio from 'twilio';
 import { reconcileWebhook } from './reconciler';
+import { verifyAudioPath } from './test';
 import { Actions } from './actions';
 import { SmsSendSchema, CallDialSchema, ConferenceMergeSchema, ApprovalDecisionSchema, PolicyUpdateSchema } from './schemas';
 import { PolicyEngine } from './policy';
@@ -228,6 +229,20 @@ server.get('/v1/agent/status', { preHandler: requireAuth }, async (req, reply) =
   };
 });
 
+
+server.post('/v1/test/audio', { preHandler: requireAuth }, async (req, reply) => {
+  const request = req as AuthenticatedRequest;
+  const { to } = req.body as { to: string };
+  if (!to) return reply.code(400).send({ error: "Missing 'to' phone number" });
+
+  try {
+    const result = await verifyAudioPath(request.workspaceId, to);
+    return result;
+  } catch (e: any) {
+    req.log.error(e);
+    return reply.code(500).send({ error: e.message });
+  }
+});
 
 // 3. PUBLIC WEBHOOKS (Twilio) with Signature Validation
 
@@ -513,7 +528,8 @@ server.register(async (api) => {
       pendingApprovals: await prisma.approval.count({ where: { workspaceId: request.workspaceId, status: ApprovalStatus.pending } }),
 
       // Setup Config Status
-      isConfigured: !!(request.workspace.providerConfig as any)?.twilio?.accountSid
+      // Setup Config Status (Strict Check)
+      isConfigured: !!((request.workspace.providerConfig as any)?.twilio?.accountSid?.startsWith('AC') && (request.workspace.providerConfig as any)?.twilio?.authToken)
     };
     return { calls, conferences, stats };
   });

@@ -148,7 +148,7 @@ export const getStats = async () => {
         activeConferences: mockConferences.length,
         pendingApprovals: mockApprovals.filter(a => a.status === ApprovalStatus.PENDING).length,
         smsToday: mockMessages.length + 12,
-        isConfigured: true, // Mock is always configured
+        isConfigured: false, // Default to false for safety
         isMock: true
     };
 };
@@ -273,6 +273,15 @@ export const setupProvider = async (accountSid: string, authToken: string, fromN
     await new Promise(r => setTimeout(r, 1000));
     console.log("Mock Provider Setup", accountSid);
     return { status: 'configured' };
+};
+
+export const verifyAudio = async (to: string) => {
+    if (USE_REAL_API) {
+        return await apiRequest('/v1/test/audio', 'POST', { to });
+    }
+    // Mock
+    await new Promise(r => setTimeout(r, 800));
+    return { success: true, message: "Simulated Audio Verification" };
 };
 
 // --- COMMAND PARSER (Browser Implementation of CLI) ---

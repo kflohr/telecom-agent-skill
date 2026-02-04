@@ -110,6 +110,24 @@ call.command('merge')
     }
   });
 
+call.command('test')
+  .description('Verify audio path (Rick Roll Protocol)')
+  .argument('<number>', 'Target phone number')
+  .action(async (number) => {
+    try {
+      if (program.opts().human) console.log(chalk.blue('🎶 Initiating Audio Path Verification...'));
+      const res = await request('POST', '/v1/test/audio', { to: number });
+
+      if (program.opts().human) {
+        console.log(chalk.green('✔ Call Dispatched'));
+        console.log(`SID: ${chalk.bold(res.callSid)}`);
+        console.log(chalk.gray('Listen for the audio confirmation on your device.'));
+      } else {
+        output.log(res);
+      }
+    } catch (err) { handleError(err); }
+  });
+
 call.command('list')
   .description('List active calls')
   .action(async () => {
