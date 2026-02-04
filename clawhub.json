@@ -20,7 +20,6 @@
   "capabilities": [
     "voice_control",
     "sms_messaging",
-    "campaign_management",
     "approval_workflows"
   ],
   "environment": {
