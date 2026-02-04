@@ -43,6 +43,18 @@ export const Documentation: React.FC = () => {
 
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
+                                <span className="text-xs font-medium text-gray-500">Audio Verification</span>
+                                <span className="text-[10px] text-gray-600 font-mono">POST /v1/test/audio</span>
+                            </div>
+                            <div className="bg-black/50 p-3 rounded-lg border border-gray-800/50 group-hover:border-gray-700 transition-colors">
+                                <code className="font-mono text-xs text-gray-300">
+                                    <span className="text-blue-400">telecom</span> call test <span className="text-gray-500">+15550000000</span>
+                                </code>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <div className="flex items-center justify-between">
                                 <span className="text-xs font-medium text-gray-500">Send SMS</span>
                                 <span className="text-[10px] text-gray-600 font-mono">POST /v1/sms</span>
                             </div>
@@ -104,9 +116,11 @@ export const Documentation: React.FC = () => {
                             <tbody className="divide-y divide-gray-800 bg-black/20">
                                 {[
                                     { cmd: 'telecom call dial', desc: 'Initiate outbound voice call', ex: 'call dial <to>' },
+                                    { cmd: 'telecom call test', desc: 'Verify audio path (Rick Roll Protocol)', ex: 'call test <to>' },
                                     { cmd: 'telecom call merge', desc: 'Bridge two active legs', ex: 'call merge <id> <id>' },
                                     { cmd: 'telecom sms send', desc: 'Dispatch alphanumeric sender', ex: 'sms send <to> <body>' },
                                     { cmd: 'telecom approvals', desc: 'Review held actions', ex: 'approvals list' },
+                                    { cmd: 'telecom update', desc: 'Self-update CLI software', ex: 'update' },
                                 ].map((row, i) => (
                                     <tr key={i} className="hover:bg-white/[0.02] transition-colors">
                                         <td className="p-4 font-mono text-gray-300 text-xs">{row.cmd}</td>
