@@ -3,7 +3,7 @@
   "name": "Telecom Control Plane",
   "id": "telecom-control-plane",
   "version": "1.2.0",
-  "description": "Enterprise-grade telecom operations platform. Call control, SMS management, and real-time visualization with AI agent integration.",
+  "description": "Turn your AI Agent into a Telecom Operator. Features bulk calling campaigns, ChatOps via Telegram, and safe human-in-the-loop approvals.",
   "author": "kflohr",
   "license": "step-enterprise",
   "repository": "https://github.com/kflohr/telecom-agent-skill",
@@ -11,15 +11,16 @@
   "tags": [
     "telecom",
     "twilio",
-    "voice",
-    "sms",
-    "real-time",
-    "dashboard"
+    "agent",
+    "moltbot",
+    "openclaw",
+    "campaigns",
+    "chatops"
   ],
   "capabilities": [
     "voice_control",
     "sms_messaging",
-    "conference_management",
+    "campaign_management",
     "approval_workflows"
   ],
   "environment": {
