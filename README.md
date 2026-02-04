@@ -21,6 +21,7 @@ It introduces a **Safety Layer** between your operators and the carrier network,
 *   **💻 CLI-First Operations**: Initiate calls, send SMS, and manage conferences directly from your terminal.
 *   **🛡️ Human-in-the-Loop Approvals**: High-risk actions (like bulk dialing or merging active lines) can be gated by policy.
 *   **📊 Real-Time Observability**: Live view of all active call legs, conferences, and message traffic.
+*   **🚀 Campaign Queue (New)**: API-driven bulk calling engine. Upload 10k+ leads and let the system dial them safely (0.5 CPS) without getting flagged as spam.
 *   **🤖 Autonomous Agents**: Native tools for AI agents (OpenClaw/MoltBot) to make calls, record audio, and read transcripts ("Memory").
 
 ## 🚀 Quick Start (Public Cloud)
@@ -60,7 +61,7 @@ This project is designed as a **Skill** for Autonomous Agents.
 ### Setup for MoltBot
 1.  **Install Skill**: Point your bot to this repository URL.
     ```
-    /install https://github.com/kflohr/telecom-control-plane
+    /install https://github.com/kflohr/telecom-agent-skill
     ```
 2.  **Configure**:
     *   The bot will need a Twilio Account SID & Auth Token.

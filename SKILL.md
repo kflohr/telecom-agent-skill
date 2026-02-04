@@ -1,34 +1,38 @@
 ---
 name: "Telecom Agent Skill"
-description: "Turn your AI Agent into a phone operator. Make calls, send SMS, and remember conversations."
-version: "1.1.1"
+description: "Turn your AI Agent into a Telecom Operator. Bulk calling, ChatOps, and Field Monitoring."
+version: "1.2.0"
 ---
 
-# 📡 Telecom Agent Skill
+# 📡 Telecom Agent Skill v1.2
 
-**Turn your AI Agent into a phone operator.**
+**Give your MoltBot / OpenClaw agent the power of a Telecom Operator.**
 
-This skill allows your **MoltBot** or **OpenClaw** agent to make real phone calls, send SMS, and "remember" conversations via the Telop.dev cloud.
+This skill connects your agent to the **Telecom Operator Console**, allowing it to manage campaigns, handle approvals, and operate on the public telephone network safely.
 
 ## ✨ Capabilities
 
+### 🚀 Campaign Queue (Bulk Calling) *New*
+*   **Mass Dialing**: Upload a list of 10,000+ numbers. The system handles rate-limiting.
+*   **ChatOps**: "Bot, create a campaign for the 'Friday Leads' list."
+*   **Monitoring**: Agent can poll status with `--json` for precise progress tracking.
+
 ### 🗣️ Voice & Speech
-*   **Make Calls**: Agent can dial any number globally.
+*   **Make Calls**: Dial any global number.
 *   **Speak**: Dynamic "Text-to-Speech" intro messages.
-*   **Listen**: Records the call audio automatically.
+*   **Listen**: Records audio automatically for quality assurance.
 
-### 🧠 Agent Memory
-*   **Transcript**: The agent receives a full text transcript.
-*   **Audio**: Access the raw MP3 recording.
-*   **Persistence**: Logs saved to your Operator Console.
+### 📱 Field Operations (Telegram)
+*   **Remote Admin**: Monitor system status from a Telegram Bot.
+*   **Approvals**: Approve/Deny high-risk actions via mobile buttons.
 
-### 🛡️ Safety Layer
-*   **Approvals**: Require human approval for high-risk calls.
-*   **Audit**: Full traceability.
+### 🧠 Operational Memory
+*   **Transcripts**: Agent can read full call transcripts (`telecom agent memory`).
+*   **Persistence**: All logs saved to the secure Operator Console.
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start for Agents
 
 ### 1. Installation
 ```bash
@@ -38,10 +42,23 @@ This skill allows your **MoltBot** or **OpenClaw** agent to make real phone call
 ### 2. Setup
 ```bash
 telecom onboard
+# Follow the wizard to link your Twilio account.
 ```
 
-### 3. Usage
+### 3. Usage Examples
+
+**Bulk Campaign**:
 ```bash
-telecom agent call +14155550100 --intro "Hello!"
+telecom campaign create "Outreach" --file leads.csv
+telecom campaign status <id> --json
+```
+
+**Single Call**:
+```bash
+telecom agent call +14155550100 --intro "Hello from the AI team."
+```
+
+**Memory Retrieval**:
+```bash
 telecom agent memory <CallSid>
 ```
