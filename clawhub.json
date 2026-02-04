@@ -1,7 +1,7 @@
 {
   "manifest_version": "1.0",
-  "name": "Telecom Control Plane",
-  "id": "telecom-control-plane",
+  "name": "Telecom Agent Skill",
+  "id": "telecom-agent-skill",
   "version": "1.2.0",
   "description": "Turn your AI Agent into a Telecom Operator. Features bulk calling campaigns, ChatOps via Telegram, and safe human-in-the-loop approvals.",
   "author": "kflohr",
