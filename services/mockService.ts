@@ -148,7 +148,7 @@ export const getStats = async () => {
         activeConferences: mockConferences.length,
         pendingApprovals: mockApprovals.filter(a => a.status === ApprovalStatus.PENDING).length,
         smsToday: mockMessages.length + 12,
-        isConfigured: true, // Mock is always configured
+        isConfigured: false, // Default to false for safety
         isMock: true
     };
 };
@@ -275,6 +275,15 @@ export const setupProvider = async (accountSid: string, authToken: string, fromN
     return { status: 'configured' };
 };
 
+export const verifyAudio = async (to: string) => {
+    if (USE_REAL_API) {
+        return await apiRequest('/v1/test/audio', 'POST', { to });
+    }
+    // Mock
+    await new Promise(r => setTimeout(r, 800));
+    return { success: true, message: "Simulated Audio Verification" };
+};
+
 // --- COMMAND PARSER (Browser Implementation of CLI) ---
 // This allows the Web Terminal to mimic the CLI behavior by hitting the API directly
 
@@ -393,8 +402,11 @@ export const processCommand = async (cmdStr: string): Promise<{ output: any; sta
             return {
                 output: `Available commands:
   telecom call dial <to> [--from <num>]
+  telecom call test <to> (Audio Check)
   telecom call merge <sidA> <sidB>
   telecom call list
+  telecom agent call <to>
+  telecom agent memory <sid>
   telecom sms send <to> <message>
   telecom approvals list
   telecom approve <id>

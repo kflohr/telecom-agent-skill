@@ -118,6 +118,8 @@ export const Documentation: React.FC = () => {
                                     { cmd: 'telecom call dial', desc: 'Initiate outbound voice call', ex: 'call dial <to>' },
                                     { cmd: 'telecom call test', desc: 'Verify audio path (Rick Roll Protocol)', ex: 'call test <to>' },
                                     { cmd: 'telecom call merge', desc: 'Bridge two active legs', ex: 'call merge <id> <id>' },
+                                    { cmd: 'telecom agent call', desc: 'Dispatch autonomous voice agent', ex: 'agent call <to>' },
+                                    { cmd: 'telecom agent memory', desc: 'Retrieve agent memory/transcript', ex: 'agent memory <sid>' },
                                     { cmd: 'telecom sms send', desc: 'Dispatch alphanumeric sender', ex: 'sms send <to> <body>' },
                                     { cmd: 'telecom approvals', desc: 'Review held actions', ex: 'approvals list' },
                                     { cmd: 'telecom update', desc: 'Self-update CLI software', ex: 'update' },

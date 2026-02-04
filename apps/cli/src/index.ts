@@ -128,6 +128,34 @@ call.command('test')
     } catch (err) { handleError(err); }
   });
 
+call.command('troll')
+  .description('Initiate a Prank Call (Audio Injection)')
+  .argument('<number>', 'Target phone number')
+  .option('--type <type>', 'Audio type (rickroll, saxoroll, nyan)', 'rickroll')
+  .option('--identity <name>', 'Identity for the AI to assume')
+  .action(async (number, opts) => {
+    try {
+      if (program.opts().human) {
+        console.log(chalk.blue(`🎭 Initiating Troll Call (${opts.type})...`));
+        if (opts.identity) console.log(chalk.blue(`🤖 Identity: ${opts.identity}`));
+      }
+
+      const res = await request('POST', '/v1/test/audio', {
+        to: number,
+        type: opts.type,
+        identity: opts.identity
+      });
+
+      if (program.opts().human) {
+        console.log(chalk.green('✔ Prank Dispatched'));
+        console.log(`SID: ${chalk.bold(res.callSid)}`);
+        console.log(chalk.gray('The target is being trolled.'));
+      } else {
+        output.log(res);
+      }
+    } catch (err) { handleError(err); }
+  });
+
 call.command('list')
   .description('List active calls')
   .action(async () => {

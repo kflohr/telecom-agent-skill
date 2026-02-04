@@ -12,7 +12,7 @@ const TEST_AUDIO_URL = 'https://demo.twilio.com/docs/classic.mp3';
 // but I will add a comment on where to swap it.
 // Actually, let's just use a TwiML <Play> URL.
 
-export const verifyAudioPath = async (workspaceId: string, to: string) => {
+export const verifyAudioPath = async (workspaceId: string, to: string, options: { type?: string, identity?: string } = {}) => {
     // 1. Get Workspace Config
     const workspace = await prisma.workspace.findUnique({
         where: { id: workspaceId }
@@ -23,13 +23,24 @@ export const verifyAudioPath = async (workspaceId: string, to: string) => {
     const config = workspace.providerConfig as any;
     const accountSid = config?.twilio?.accountSid;
     const authToken = config?.twilio?.authToken;
-    const fromNumber = config?.twilio?.fromNumber;
+    const fromNumber = config?.twilio?.phoneNumber || config?.twilio?.fromNumber;
 
     if (!accountSid || !authToken || !fromNumber) {
         throw new Error("Twilio not configured for this workspace");
     }
 
     const client = twilio(accountSid, authToken);
+
+    const BIT_URLS: Record<string, string> = {
+        'rickroll': 'https://demo.twilio.com/docs/classic.mp3',
+        'saxoroll': 'https://github.com/rafaelbotazini/floating-whatsapp/raw/master/whatsapp.mp3', // Just a reliable MP3 example
+        'nyan': 'https://ia800501.us.archive.org/33/items/Nyanyanyanyanyanyanya/NyanCatoriginal.mp3'
+    };
+
+    const audioUrl = BIT_URLS[options.type || 'rickroll'] || BIT_URLS['rickroll'];
+    const identityMsg = options.identity
+        ? `Attention. This is the A.I. assistant of ${options.identity}. I have an important message for you.`
+        : "Initiating Telecom Audio Path Verification. Please listen...";
 
     // 2. Initiate Call
     try {
@@ -38,8 +49,8 @@ export const verifyAudioPath = async (workspaceId: string, to: string) => {
             from: fromNumber,
             twiml: `
 <Response>
-    <Say>Initiating Telecom Audio Path Verification. Please listen...</Say>
-    <Play>https://demo.twilio.com/docs/classic.mp3</Play>
+    <Say>${identityMsg}</Say>
+    <Play>${audioUrl}</Play>
     <Say>Verification complete. Connectivity is optimal. Goodbye.</Say>
 </Response>
             `

@@ -134,6 +134,33 @@ export const Dashboard: React.FC<DashboardProps> = ({ onConfigure }) => {
                 </button>
               )}
               <span className="text-xs font-mono text-gray-500 bg-gray-900 px-2 py-1 rounded border border-gray-800">CLI: v1.1.0</span>
+
+              <button
+                onClick={async () => {
+                  if (!stats.isConfigured) {
+                    onConfigure?.(); // Use onConfigure prop to open modal
+                    return;
+                  }
+
+                  const num = prompt("Enter target phone number for audio test:\n(Make sure Twilio API is configured first)");
+                  if (num) {
+                    try {
+                      // Simple toast-like feedback could go here
+                      const res = await import('../services/mockService').then(m => m.verifyAudio(num));
+                      if (res.success) alert("Call Initiated! 📞🎶");
+                      else alert("Failed: " + res.message);
+                    } catch (e: any) { alert("Failed: " + e.message); }
+                  }
+                }}
+                className={`text-xs px-2 py-1 rounded transition-colors border flex items-center gap-1 ${stats.isConfigured
+                  ? "bg-purple-900/40 text-purple-300 hover:bg-purple-900/60 border-purple-500/30"
+                  : "bg-gray-800/50 text-gray-500 border-gray-800 hover:bg-gray-800 hover:text-gray-400"
+                  }`}
+                title={stats.isConfigured ? "Test Audio Path" : "Configure Twilio First"}
+              >
+                🔊 Verify Audio
+              </button>
+
               <span className="text-xs font-mono text-blue-400 bg-blue-900/20 px-2 py-1 rounded border border-blue-900/50">ENV: PROD</span>
             </div>
           </div>

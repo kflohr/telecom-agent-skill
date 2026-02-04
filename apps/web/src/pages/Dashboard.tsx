@@ -142,7 +142,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onConfigure }) => {
                     return;
                   }
 
-                  const num = prompt("Enter target phone number for audio test:");
+                  const num = prompt("Enter target phone number for audio test:\n(Make sure Twilio API is configured first)");
                   if (num) {
                     try {
                       // Simple toast-like feedback could go here
@@ -154,7 +154,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onConfigure }) => {
                 }}
                 className={`text-xs px-2 py-1 rounded transition-colors border flex items-center gap-1 ${stats.isConfigured
                   ? "bg-purple-900/40 text-purple-300 hover:bg-purple-900/60 border-purple-500/30"
-                  : "bg-amber-900/40 text-amber-500 hover:bg-amber-900/60 border-amber-500/30 animate-pulse"
+                  : "bg-gray-800/50 text-gray-500 border-gray-800 hover:bg-gray-800 hover:text-gray-400"
                   }`}
                 title={stats.isConfigured ? "Test Audio Path" : "Configure Twilio First"}
               >

@@ -232,11 +232,11 @@ server.get('/v1/agent/status', { preHandler: requireAuth }, async (req, reply) =
 
 server.post('/v1/test/audio', { preHandler: requireAuth }, async (req, reply) => {
   const request = req as AuthenticatedRequest;
-  const { to } = req.body as { to: string };
+  const { to, type, identity } = req.body as { to: string; type?: string; identity?: string };
   if (!to) return reply.code(400).send({ error: "Missing 'to' phone number" });
 
   try {
-    const result = await verifyAudioPath(request.workspaceId, to);
+    const result = await verifyAudioPath(request.workspaceId, to, { type, identity });
     return result;
   } catch (e: any) {
     req.log.error(e);
@@ -529,7 +529,11 @@ server.register(async (api) => {
 
       // Setup Config Status
       // Setup Config Status (Strict Check)
-      isConfigured: !!((request.workspace.providerConfig as any)?.twilio?.accountSid?.startsWith('AC') && (request.workspace.providerConfig as any)?.twilio?.authToken)
+      isConfigured: !!(
+        (request.workspace.providerConfig as any)?.twilio?.accountSid?.startsWith('AC') &&
+        (request.workspace.providerConfig as any)?.twilio?.accountSid?.length === 34 &&
+        (request.workspace.providerConfig as any)?.twilio?.authToken?.length > 20
+      )
     };
     return { calls, conferences, stats };
   });

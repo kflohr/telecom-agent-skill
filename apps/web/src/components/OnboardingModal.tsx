@@ -4,10 +4,11 @@ import { setupProvider } from '../services/mockService';
 
 interface OnboardingModalProps {
     isOpen: boolean;
+    isConfigured?: boolean;
     onComplete: () => void;
 }
 
-export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComplete }) => {
+export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, isConfigured, onComplete }) => {
     const [sid, setSid] = useState('');
     const [token, setToken] = useState('');
     const [fromNumber, setFromNumber] = useState('');
@@ -56,9 +57,26 @@ export const OnboardingModal: React.FC<OnboardingModalProps> = ({ isOpen, onComp
                     <div className="mx-auto w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center">
                         <ShieldAlert className="text-blue-400" size={24} />
                     </div>
-                    <h2 className="text-xl font-bold text-gray-100">Setup Control Plane</h2>
-                    <p className="text-sm text-gray-400">Connect your Twilio account to enable calls & SMS.</p>
+                    <h2 className="text-xl font-bold text-gray-100">
+                        {isConfigured ? 'Update Configuration' : 'Setup Control Plane'}
+                    </h2>
+                    <p className="text-sm text-gray-400">
+                        {isConfigured
+                            ? 'System is currently configured. Enter new credentials to overwrite.'
+                            : 'Connect your Twilio account to enable calls & SMS.'}
+                    </p>
                 </div>
+
+                {isConfigured && (
+                    <div className="bg-emerald-900/20 border border-emerald-900/50 p-3 rounded text-center">
+                        <p className="text-xs text-emerald-400 font-mono">
+                            ✅ Active Configuration Detected
+                        </p>
+                        <p className="text-[10px] text-gray-500 mt-1">
+                            Your credentials are securely stored. (ID: AC...••••)
+                        </p>
+                    </div>
+                )}
 
                 {/* Form */}
                 {status === 'success' ? (
